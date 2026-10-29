@@ -1,0 +1,14 @@
+{
+  "name": "tcyp-rules-tests",
+  "private": true,
+  "type": "module",
+  "description": "Firestore 規則測試（與網站本身的套件分開安裝）",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-tcyp \"node --test rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.34.1"
+  }
+}

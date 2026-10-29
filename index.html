@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>台中青少年 TCYP</title>
+  <meta name="description" content="台中市召會青少年組即時資訊互動地圖：行事曆、校園排、社區青少年排、特會與各項成全。">
+  <meta name="theme-color" content="#f6e7c8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <!-- 內嵌 script 改了內容，要重新計算 sha256（見 tools/csp-hashes.mjs） -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-98FR/5EhpsYi7t2PObXfZgeFRlxSOl/QKHA09y3mtL4=' 'sha256-3PFU7alt8NmY437L5MofrnmqE3QXQCjxu46PJRjzitM=' https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-src https://tcyp-island.firebaseapp.com https://apis.google.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="台中青少年 TCYP">
+  <meta property="og:title" content="台中青少年 TCYP｜青少年小島城市">
+  <meta property="og:description" content="台中市召會青少年組：近期活動、每週校園排與社區排、第一次參加指南。">
+  <meta property="og:url" content="https://sunsyuewei.github.io/TCYP-Island/">
+  <meta property="og:image" content="https://sunsyuewei.github.io/TCYP-Island/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="zh_TW">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,4 90,27 90,73 50,96 10,73 10,27' fill='%23f2b544'/><text x='50' y='64' font-size='38' text-anchor='middle' font-family='Arial' font-weight='bold' fill='%23fff'>YP</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
+  </script>
+</head>
+<body>
+  <a class="skip" href="?text">跳到文字版內容</a>
+  <div id="sky"></div>
+  <canvas id="scene" aria-label="由六角形小島拼成的台中青少年 3D 城市"></canvas>
+  <div id="pins" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <button class="brand" id="homeBtn" title="回到全景">
+      <span class="brand-hex">YP</span>
+      <span class="brand-text"><b>台中青少年</b><i>TCYP</i></span>
+    </button>
+    <div class="live" id="live">
+      <span class="live-dot"></span>
+      <span id="clock">--:--</span>
+      <span class="live-sep"></span>
+      <button class="live-item" id="liveToday"></button>
+      <button class="live-item" id="liveNext"></button>
+    </div>
+    <a class="icon-btn" id="igBtn" href="https://www.instagram.com/tc_yp/" target="_blank" rel="noopener" title="官方 Instagram @tc_yp" aria-label="官方 Instagram">📷</a>
+    <a class="icon-btn" id="ytBtn" href="https://www.youtube.com/@tcyp479" target="_blank" rel="noopener" title="官方 YouTube @tcyp479" aria-label="官方 YouTube">▶️</a>
+    <a class="icon-btn" id="textBtn" href="?text" title="文字版" aria-label="切換到文字版">文</a>
+    <button class="icon-btn" id="nightBtn" title="切換白天／夜晚">🌙</button>
+  </header>
+
+  <div class="menu-bar" id="menuBar">
+    <button class="menu-me" id="meBtn"><span aria-hidden="true">👤</span>我的島民</button>
+    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu"><span aria-hidden="true">☰</span>小島目錄</button>
+  </div>
+  <nav class="menu" id="menu" aria-label="小島目錄" hidden>
+    <div class="menu-head"><b>小島目錄</b><button class="menu-close" id="menuClose" aria-label="關閉選單">✕</button></div>
+    <div class="menu-grid" id="dock"></div>
+  </nav>
+
+  <aside class="panel" id="panel" role="dialog" aria-hidden="true" inert>
+    <div class="panel-grip"></div>
+    <button class="panel-close" id="panelClose" aria-label="關閉">✕</button>
+    <div class="panel-body" id="panelBody"></div>
+  </aside>
+
+  <div class="intro" id="intro">
+    <div class="intro-card">
+      <div class="intro-hex">YP</div>
+      <h1>台中青少年 <span>TCYP</span></h1>
+      <p class="intro-tag">一起認識主、享受召會生活，在同伴中成長。</p>
+      <p>歡迎來到青少年小島城市！<br>拖曳旋轉、滾輪縮放，點一下小島看看島上有什麼。</p>
+      <div class="intro-entries">
+        <button data-enter="calendar">📅 近期活動</button>
+        <button data-enter="campus">🗓️ 每週聚集</button>
+        <button data-enter="plaza#first">👋 第一次參加</button>
+        <button data-enter="avatar">👤 捏我的島民</button>
+      </div>
+      <p class="intro-ig"><a href="https://www.instagram.com/tc_yp/" target="_blank" rel="noopener">📷 IG @tc_yp</a><a href="https://www.youtube.com/@tcyp479" target="_blank" rel="noopener">▶️ YouTube @tcyp479</a><a href="?text">📄 文字版</a><a href="privacy.html">🔒 隱私說明</a></p>
+      <button class="btn-primary" id="enterBtn">開始探索 →</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">小島建造中…</div>
+
+  <noscript><div class="nojs">本網站需要啟用 JavaScript。活動資訊請見官方 Instagram：<a href="https://www.instagram.com/tc_yp/">@tc_yp</a></div></noscript>
+  <script nomodule>document.getElementById('loading').innerHTML = '這個瀏覽器版本太舊，無法顯示網站。<br>活動資訊請見官方 Instagram：<a href="https://www.instagram.com/tc_yp/">@tc_yp</a>';</script>
+  <script type="module" src="boot.js"></script>
+</body>
+</html>

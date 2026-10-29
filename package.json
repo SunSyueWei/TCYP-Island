@@ -1,0 +1,22 @@
+{
+  "name": "tcyp",
+  "version": "1.0.0",
+  "description": "台中青少年 TCYP 互動網站",
+  "scripts": {
+    "build:firebase": "esbuild src/firebase-entry.js --bundle --format=esm --minify --target=es2020 --outfile=vendor/firebase.js",
+    "build:rules": "node tools/build-rules.mjs"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "firebase": "^13.1.0"
+  },
+  "private": true,
+  "type": "module",
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
+  }
+}

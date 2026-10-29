@@ -245,6 +245,7 @@ export const ISLANDS = [
           <li><span class="num">1</span>為身邊的同學與朋友<b>禱告</b></li>
           <li><span class="num">2</span>尊重朋友的意願，<b>邀請</b>他們參加校園排或福音聚會</li>
           <li><span class="num">3</span>朋友想更認識主，可以和服事者一起<b>聊聊</b></li></ul>`)
+        + sec('🎣 港邊釣魚', '<p>每天可以在港邊釣 3 次魚，有普通、稀有、超稀有和傳說四種稀有度，收集看看吧！</p><div class="goto"><button data-open="fishing">🎣 去釣魚</button></div>')
         + sec('看看哪裏有聚集', goto(['campus', 'community']));
     },
   },

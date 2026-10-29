@@ -4,6 +4,7 @@ import { ISLANDS, taipeiNow, nextEvent, daysUntil, todaysGroups, isTentative } f
 import { createIslanders } from './islanders.js';
 import { createCreator } from './creator.js';
 import * as store from './store.js';
+import { createFishing, remainingToday } from './fishing.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -809,6 +810,14 @@ function setMenu(open) {
 menuBtn.addEventListener('click', () => setMenu(menu.hidden));
 document.getElementById('menuClose').addEventListener('click', () => { setMenu(false); menuBtn.focus(); });
 document.getElementById('meBtn').addEventListener('click', () => { setMenu(false); creator.open(); });
+// 釣魚
+const fishing = createFishing();
+const fishCount = document.getElementById('fishCount');
+const updateFishCount = () => { fishCount.textContent = `${remainingToday()}/3`; };
+updateFishCount();
+function openFishing() { setMenu(false); fishing.open(); }
+document.getElementById('fishBtn').addEventListener('click', openFishing);
+new MutationObserver(updateFishCount).observe(document.querySelector('.fishing'), { attributes: true, attributeFilter: ['hidden'] });
 addEventListener('pointerdown', (e) => { if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false); });
 ISLANDS.forEach((d) => {
   const b = document.createElement('button');
@@ -973,6 +982,7 @@ addEventListener('keydown', (e) => {
   goHome();
 });
 panelBody.addEventListener('click', (e) => {
+  if (e.target.closest('[data-open="fishing"]')) return openFishing();
   const g = e.target.closest('[data-goto]');
   if (g) {
     const anchor = g.dataset.anchor;
@@ -1022,6 +1032,7 @@ function updateLive() {
   });
   if (selected) { const st = panelBody.scrollTop; renderPanel(); panelBody.scrollTop = st; }
   if (autoNight) setNight(n.hour >= 18 || n.hour < 6);
+  updateFishCount();
 }
 
 // ================= 日夜 =================
@@ -1047,7 +1058,10 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+// 釣魚或捏島民的視窗打開時，暫停後面的 3D 畫面（省電，也讓 QTE 在低階手機上反應即時）
+const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden])');
 function frame() {
+  if (overlays()) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 

@@ -1,10 +1,10 @@
 // 純文字版：3D 無法執行時，或使用者選擇文字版時顯示
-import { ISLANDS, taipeiNow } from './content.js';
+import { ISLANDS, taipeiNow, upcomingMajor, isTentative } from './content.js';
 import { SITE } from './data.js';
 
 export function start({ reason, canTry3D }) {
   document.documentElement.classList.add('text-mode');
-  for (const id of ['intro', 'loading', 'panel', 'menuBar', 'menu', 'pins', 'scene']) document.getElementById(id)?.remove();
+  for (const id of ['intro', 'loading', 'panel', 'menuBar', 'menu', 'pins', 'scene', 'peopleBtn']) document.getElementById(id)?.remove();
   document.getElementById('live')?.remove();
   document.getElementById('nightBtn')?.remove();
 
@@ -14,7 +14,11 @@ export function start({ reason, canTry3D }) {
   root.id = 'textSite';
   const note = reason === 'user' ? ''
     : `<p class="hint">這台裝置無法顯示 3D 小島，已為你切換成文字版，所有資訊都一樣。</p>`;
+  const major = upcomingMajor(taipeiNow().date);
+  const alert = major ? `<p class="t-alert" role="alert">🌊 <b>${major.level === 'now' ? '行動進行中' : major.level === 'urgent' ? '緊急警報' : '海嘯警報'}</b>：${major.ev.title}
+    ${major.level === 'now' ? '進行中' : isTentative(major.ev) ? '（日期暫定）' : `倒數 ${major.d} 天`}　<a href="#t-calendar">看詳情</a></p>` : '';
   root.innerHTML = `
+    ${alert}
     <div class="t-head">
       <h1>台中青少年 <span>TCYP</span></h1>
       <p>${SITE.tagline}</p>

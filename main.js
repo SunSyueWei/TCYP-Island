@@ -7,6 +7,7 @@ import * as store from './store.js';
 import { createFishing, remainingToday } from './fishing.js';
 import * as staff from './staff.js';
 import { createPeople } from './people.js';
+import { createTsunami } from './tsunami.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -1325,4 +1326,10 @@ if (location.hash && ISLANDS.some((i) => i.id === location.hash.slice(1))) {
   intro.classList.add('gone');
   setTimeout(() => openIsland(location.hash.slice(1)), 300);
 }
+// 重大行動的海嘯警報
+const tsunami = createTsunami({
+  today: taipeiNow().date,
+  onDetails: () => { intro.classList.add('gone'); if (arch !== 'main') switchArch('main'); openIsland('calendar'); },
+});
+if (tsunami.active) pinEls[islandObjs.findIndex((i) => i.userData.id === 'calendar')]?.classList.add('alarm');
 frame();

@@ -569,3 +569,94 @@ body.panel-open .people-tab, body.staff-mode .people-tab, body.people-open .peop
   .people-tab { padding: 10px 6px 10px 8px; }
   body.people-open .menu-bar { opacity: 0; pointer-events: none; }
 }
+
+/* ---------- 重大行動：海嘯警報 ---------- */
+.topbar { flex-wrap: wrap; }
+.tsunami-row { order: 9; flex-basis: 100%; display: flex; justify-content: center; pointer-events: none; }
+.tsunami-bar {
+  pointer-events: auto; position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 8px; max-width: 100%;
+  border: 2px solid #b8321e; border-radius: 999px; padding: 7px 16px 7px 12px;
+  background: linear-gradient(90deg, #e2452b, #f0743a); color: #fff; font-size: 14px; font-weight: 700;
+  box-shadow: 0 6px 24px rgba(200, 50, 20, .45); animation: tsPulse 1.6s ease-in-out infinite;
+}
+.tsunami-bar b { font-weight: 900; letter-spacing: 1px; }
+.ts-bar-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.ts-bar-cd { background: #fff; color: #c8321c; border-radius: 999px; padding: 1px 9px; font-weight: 900; white-space: nowrap; flex: none; }
+.tsunami-bar.lv-warn { background: linear-gradient(90deg, #f08a24, #f5b23a); border-color: #c76a12; color: #3b2108; box-shadow: 0 6px 24px rgba(220, 120, 20, .45); }
+.tsunami-bar.lv-warn .ts-bar-cd { color: #b35d0c; }
+.tsunami-bar.lv-now { background: linear-gradient(90deg, #2a7fd4, #5fb3b6); border-color: #1d5f9f; }
+.tsunami-bar.lv-now .ts-bar-cd { color: #1d5f9f; }
+.ts-siren { width: 12px; height: 12px; border-radius: 50%; background: #fff; flex: none; animation: tsSiren .5s steps(2) infinite; box-shadow: 0 0 10px #fff; }
+@keyframes tsPulse { 50% { transform: scale(1.04); box-shadow: 0 6px 34px rgba(230, 60, 20, .75); } }
+@keyframes tsSiren { 50% { opacity: .15; } }
+.pin.alarm .em { animation: tsAlarm 1s ease-in-out infinite; }
+.pin.alarm { border-color: #e2452b; }
+@keyframes tsAlarm { 50% { background: #e2452b; transform: scale(1.18); } }
+
+.tsunami {
+  position: fixed; inset: 0; z-index: 60; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: rgba(20, 28, 48, .55); backdrop-filter: blur(2px);
+}
+.tsunami[hidden] { display: none; }
+.ts-flash { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(230, 50, 20, .55)); opacity: 0; }
+.tsunami.in .ts-flash { animation: tsFlash .9s ease-in-out 4; }
+.tsunami.lv-warn .ts-flash { background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(245, 150, 30, .55)); }
+.tsunami.lv-now .ts-flash { background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(40, 130, 220, .5)); }
+@keyframes tsFlash { 50% { opacity: 1; } }
+.ts-tape { position: absolute; left: 0; right: 0; height: 34px; overflow: hidden; background: repeating-linear-gradient(-45deg, #ffcf2e 0 22px, #2a2116 22px 44px); border-block: 3px solid #2a2116; }
+.ts-tape.top { top: max(0px, env(safe-area-inset-top)); }
+.ts-tape div { display: flex; white-space: nowrap; width: max-content; animation: tsTape 14s linear infinite; }
+.ts-tape span { display: inline-block; margin: 4px 0; padding: 2px 0; background: #2a2116; color: #ffcf2e; font-weight: 900; font-size: 14px; letter-spacing: 2px; }
+@keyframes tsTape { to { transform: translateX(-50%); } }
+
+.ts-waves { position: absolute; left: 0; bottom: 0; width: 200%; height: 75%; pointer-events: none; transform: translateY(100%); }
+.tsunami.in .ts-waves { animation: tsRise 1.6s cubic-bezier(.2, .8, .3, 1) forwards, tsSlosh 7s ease-in-out 1.6s infinite; }
+.ts-waves .w3 { fill: #3d8fb3; opacity: .55; animation: tsDrift 9s linear infinite; }
+.ts-waves .w2 { fill: #4fa9c4; opacity: .7; animation: tsDrift 6s linear infinite reverse; }
+.ts-waves .w1 { fill: #7ccfd0; opacity: .9; animation: tsDrift 4s linear infinite; }
+@keyframes tsRise { 0% { transform: translate(0, 100%); } 60% { transform: translate(-10%, -18%); } 100% { transform: translate(-12%, 20%); } }
+@keyframes tsSlosh { 0%, 100% { transform: translate(-12%, 20%); } 50% { transform: translate(-30%, 26%); } }
+@keyframes tsDrift { to { transform: translateX(-50%); } }
+
+.ts-card {
+  position: relative; width: min(440px, 100%); text-align: center;
+  background: var(--paper); border: 4px solid #e2452b; border-radius: 26px; padding: 22px 22px 18px;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, .5), 0 30px 80px rgba(0, 0, 0, .4);
+}
+.tsunami.in .ts-card { animation: tsShake .6s cubic-bezier(.36, .07, .19, .97) .9s both, tsPop .45s cubic-bezier(.2, .9, .25, 1.2) both; }
+.tsunami.lv-warn .ts-card { border-color: #f08a24; }
+.tsunami.lv-now .ts-card { border-color: #2a7fd4; }
+@keyframes tsPop { from { transform: scale(.6); opacity: 0; } }
+@keyframes tsShake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-8px) rotate(-1deg); } 40%, 60% { transform: translateX(8px) rotate(1deg); } }
+.ts-badge { display: inline-flex; align-items: center; gap: 8px; background: #e2452b; color: #fff; border-radius: 999px; padding: 6px 16px; font-weight: 900; font-size: 18px; letter-spacing: 2px; }
+.ts-badge small { font-family: Fredoka, sans-serif; font-size: 11px; letter-spacing: 1px; opacity: .85; }
+.tsunami.lv-warn .ts-badge { background: #f08a24; color: #3b2108; }
+.tsunami.lv-warn .ts-badge .ts-siren { background: #3b2108; box-shadow: none; }
+.tsunami.lv-now .ts-badge { background: #2a7fd4; }
+.ts-card h2 { margin: 14px 0 6px; font-size: 24px; font-weight: 900; line-height: 1.35; }
+.ts-cd { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin: 4px 0 8px; color: #e2452b; }
+.tsunami.lv-warn .ts-cd { color: #d36a0c; }
+.tsunami.lv-now .ts-cd { color: #2a7fd4; }
+.ts-cd b { font-family: Fredoka, sans-serif; font-size: 64px; line-height: 1; font-weight: 700; }
+.ts-cd span { font-size: 18px; font-weight: 900; }
+.ts-info { list-style: none; margin: 0 0 8px; padding: 10px 14px; background: #fff6e2; border-radius: 14px; text-align: left; font-size: 14px; line-height: 1.8; }
+.ts-call { margin: 0 0 14px; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+.ts-acts { display: flex; gap: 8px; justify-content: center; }
+.ts-acts button { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 9px 18px; font-weight: 900; font-size: 15px; }
+.ts-acts .ts-go { background: #e2452b; border-color: #b8321e; color: #fff; }
+.tsunami.lv-warn .ts-go { background: #f08a24; border-color: #c76a12; color: #3b2108; }
+.tsunami.lv-now .ts-go { background: #2a7fd4; border-color: #1d5f9f; }
+@media (max-width: 720px) {
+  .tsunami-bar { font-size: 12px; padding: 5px 12px 5px 10px; }
+  .ts-cd b { font-size: 52px; }
+  .ts-card h2 { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tsunami-bar, .ts-siren, .pin.alarm .em, .ts-tape div, .ts-waves path, .tsunami.in .ts-flash, .tsunami.in .ts-card { animation: none !important; }
+  .tsunami.in .ts-waves { animation: none; transform: translate(-12%, 20%); }
+}
+body:has(.intro:not(.gone)) .people-tab { opacity: 0; pointer-events: none; }
+.t-alert { margin: 0 0 12px; padding: 10px 16px; border-radius: 16px; background: #e2452b; color: #fff; font-size: 15px; }
+.t-alert a { color: #fff; font-weight: 900; }

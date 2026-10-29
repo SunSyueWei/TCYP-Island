@@ -36,6 +36,16 @@ export function daysUntil(date, today) {
 
 export const isTentative = (ev) => ev.status === 'tentative';
 
+// 重大行動：最近一場還沒結束、而且進入提醒期間的（preview 為 true 時不管天數，用來預覽警報）
+export const ALERT_DAYS = 30;
+export function upcomingMajor(today, { preview = false } = {}) {
+  const ev = EVENTS.find((e) => e.major && eventStatus(e, today) !== 'past');
+  if (!ev) return null;
+  const d = daysUntil(ev.start, today);
+  if (!preview && d > (ev.alertDays ?? ALERT_DAYS)) return null;
+  return { ev, d, level: d <= 0 ? 'now' : d <= 3 ? 'urgent' : 'warn' };
+}
+
 // 只計算每週固定的排；每月、隔週的排無法從星期判斷是否就是今天
 export function todaysGroups(day) {
   return {

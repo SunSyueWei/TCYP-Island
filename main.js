@@ -6,6 +6,7 @@ import { createCreator } from './creator.js';
 import * as store from './store.js';
 import { createFishing, remainingToday } from './fishing.js';
 import * as staff from './staff.js';
+import { createPeople } from './people.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -777,6 +778,45 @@ function updateMePin(w, h) {
   mePin.style.transform = `translate(${(tmpV.x * 0.5 + 0.5) * w}px, ${(-tmpV.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
 }
 
+// 其他島民頭上的暱稱：只顯示離鏡頭最近的幾位，避免畫面太亂
+const MAX_TAGS = 30;
+const tagEls = [];
+function tagEl(i) {
+  if (!tagEls[i]) {
+    const el = document.createElement('div');
+    el.className = 'pin tag hidden';
+    pinsEl.appendChild(el);
+    tagEls[i] = el;
+  }
+  return tagEls[i];
+}
+const tagPos = new THREE.Vector3();
+function updateTags(w, h) {
+  let shown = [];
+  if (arch === 'main' && people.tagsOn()) {
+    for (const p of islanders.real()) {
+      if (!p.name || p === namePerson || !p.mesh.parent) continue;
+      p.mesh.getWorldPosition(tagPos);
+      const d = tagPos.distanceToSquared(camera.position);
+      tagPos.y += 0.5;
+      tagPos.project(camera);
+      if (tagPos.z >= 1 || Math.abs(tagPos.x) > 1.02 || Math.abs(tagPos.y) > 1.02) continue;
+      shown.push({ p, d, x: (tagPos.x * 0.5 + 0.5) * w, y: (-tagPos.y * 0.5 + 0.5) * h });
+    }
+    shown.sort((a, b) => a.d - b.d);
+    shown = shown.slice(0, MAX_TAGS);
+  }
+  shown.forEach((s, i) => {
+    const el = tagEl(i);
+    if (el._p !== s.p || el.textContent !== s.p.name) { el.textContent = s.p.name; el._p = s.p; } // 暱稱一律當純文字
+    el.classList.remove('hidden');
+    el.classList.toggle('far', s.d > 45 * 45);
+    el.style.transform = `translate(${s.x}px, ${s.y}px) translate(-50%, -100%)`;
+    el.style.zIndex = String(Math.max(1, 60 - Math.round(Math.sqrt(s.d)))); // 壓在小島標籤下面
+  });
+  for (let i = shown.length; i < tagEls.length; i++) { tagEls[i].classList.add('hidden'); tagEls[i]._p = null; }
+}
+
 // 下方目錄
 const dock = document.getElementById('dock');
 let myPid = null;
@@ -855,11 +895,28 @@ store.onUser(async (u) => {
   } catch (err) { console.error(err); }
 });
 
+// 右側的島民名單
+const peopleBtn = document.getElementById('peopleBtn');
+const people = createPeople({
+  list: () => islanders.real(),
+  mine: () => islanders.mine(),
+  onOpen: () => { closePanel(); setMenu(false); peopleBtn.setAttribute('aria-expanded', 'true'); },
+  onFind: (p) => {
+    if (isMobile()) people.close();
+    flyToPerson(p);
+    if (!p.mine) openWhoCard(p);
+  },
+});
+peopleBtn.addEventListener('click', () => { if (people.isOpen()) people.close(); else people.open(); });
+new MutationObserver(() => { if (!people.isOpen()) peopleBtn.setAttribute('aria-expanded', 'false'); })
+  .observe(document.getElementById('people'), { attributes: true, attributeFilter: ['hidden'] });
+
 // 其他人的島民：打開時讀一次，之後每 10 分鐘（畫面在前景時）更新；本機有 10 分鐘快取
 async function refreshOthers(force = false) {
   try {
     const list = await store.loadOthers({ force });
     islanders.setOthers(list, { exclude: myPid });
+    people.refresh();
   } catch (err) { console.error('讀取島民失敗', err); }
 }
 refreshOthers();
@@ -872,6 +929,7 @@ const menuBtn = document.getElementById('menuBtn');
 function setMenu(open) {
   menu.hidden = !open;
   menuBtn.setAttribute('aria-expanded', String(open));
+  if (open) people.close();
   if (open) (dock.querySelector('.on') || dock.firstElementChild)?.focus();
 }
 menuBtn.addEventListener('click', () => setMenu(menu.hidden));
@@ -919,6 +977,7 @@ function homeView() { const c = archCenter(); return [HOME_POS.clone().add(c), c
 function switchArch(to) {
   if (to === arch) return;
   closePanel();
+  people.close();
   setMenu(false);
   arch = to;
   if (to === 'staff') { buildStaffArchipelago(); setStaffVisible(true); }
@@ -1018,6 +1077,7 @@ function renderPanel() {
 function openIsland(id) {
   const isl = islandObjs.find((i) => i.userData.id === id);
   if (!isl) return;
+  people.close();
   stopAuto();
   selected = isl;
   renderPanel();
@@ -1059,13 +1119,18 @@ function closePanel() {
 // 鏡頭飛到自己的島民
 function focusMine() {
   const me = islanders.mine();
-  if (!me) return;
+  if (me) flyToPerson(me);
+}
+// 鏡頭飛到某位島民（桌機開著名單時，讓他避開右側的名單）
+function flyToPerson(person) {
   closePanel();
   stopAuto();
   const p = new THREE.Vector3();
-  me.mesh.getWorldPosition(p);
+  person.mesh.getWorldPosition(p);
   const dir = new THREE.Vector3().subVectors(camera.position, controls.target).setY(0).normalize();
-  flyTo(p.clone().add(new THREE.Vector3(dir.x * 7, 6, dir.z * 7)), p, 1.2);
+  const target = p.clone();
+  if (people.isOpen() && !isMobile()) target.addScaledVector(new THREE.Vector3(-dir.z, 0, dir.x), 1.6);
+  flyTo(target.clone().add(new THREE.Vector3(dir.x * 7, 6, dir.z * 7)), target, 1.2);
 }
 function goHome() {
   closePanel();
@@ -1235,6 +1300,7 @@ function frame() {
 
   updateMePin(w, h);
   updateWhoPin(w, h);
+  updateTags(w, h);
   updateLive();
   renderer.render(scene, camera);
   window.__tcypReady = true;

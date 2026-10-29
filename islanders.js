@@ -124,11 +124,13 @@ export function createIslanders({ islands, onTick, lowEnd }) {
         old.mesh.geometry.dispose();
         old.mesh.geometry = avatarGeometry(cfg);
         old.name = cfg.name;
+        old.cfg = cfg;
         continue;
       }
       const p = add(islandFor(hash(pid)), cfg);
       if (!p) continue;
       p.name = cfg.name;
+      p.cfg = cfg;
       p.pid = pid;
       others.set(pid, p);
       if (demo.length && people.length > TARGET) remove(demo.pop());
@@ -161,6 +163,7 @@ export function createIslanders({ islands, onTick, lowEnd }) {
       mine.mesh.geometry = avatarGeometry(sanitize(cfg));
     }
     mine.name = name;
+    mine.cfg = sanitize(cfg);
   }
 
   const tmp = new THREE.Vector2();
@@ -200,5 +203,7 @@ export function createIslanders({ islands, onTick, lowEnd }) {
     remove(mine);
     mine = null;
   }
-  return { setMine, clearMine, setOthers, removeOther, count: () => people.length, mine: () => mine, meshes: () => people.map((p) => p.mesh) };
+  // 真實島民（不含示範島民）：給名單和名字標籤用
+  const real = () => [...others.values()];
+  return { setMine, clearMine, setOthers, removeOther, real, count: () => people.length, mine: () => mine, meshes: () => people.map((p) => p.mesh) };
 }

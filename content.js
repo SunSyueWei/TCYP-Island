@@ -249,7 +249,7 @@ export const ISLANDS = [
     },
   },
   {
-    id: 'home', name: '弟兄姊妹之家', short: '之家', emoji: '🏠', tint: '#ffe0e4', angle: 200,
+    id: 'home', name: '弟兄姊妹之家', short: 'BH&SH', emoji: '🏠', tint: '#ffe0e4', angle: 200,
     render: () => hero('home', '高中生一起生活的家')
       + sec('之家是什麼？', '<p>高中弟兄之家、姊妹之家是讓高中生一起住、一起生活的地方，弟兄與姊妹分開居住。</p>')
       + sec('之家的一天', `<ul class="list">

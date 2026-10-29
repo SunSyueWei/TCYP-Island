@@ -246,3 +246,6 @@ export async function adminClearReports(ids) {
 }
 
 export function myUid() { return uidNow(); }
+
+// 給服事者專區用：目前登入者的 Firebase ID token（約一小時有效，SDK 會自動更新）
+export async function idToken() { return currentUser ? currentUser.getIdToken() : null; }

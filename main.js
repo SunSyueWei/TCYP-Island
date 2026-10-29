@@ -5,6 +5,7 @@ import { createIslanders } from './islanders.js';
 import { createCreator } from './creator.js';
 import * as store from './store.js';
 import { createFishing, remainingToday } from './fishing.js';
+import * as staff from './staff.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -53,6 +54,7 @@ Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, n
 sun.shadow.bias = -0.0008;
 sun.shadow.normalBias = 0.03;
 scene.add(sun);
+scene.add(sun.target);
 
 // ================= 材質工具 =================
 const mats = new Map();
@@ -445,6 +447,60 @@ const builders = {
     const teen = person(C.coral); teen.position.x = 0.1; pair.add(teen);
     put(isl, 0, pair, 0.1, 0.65);
   },
+  // ---------- 服事者群島 ----------
+  'st-hub'(isl) {
+    const hall = house({ w: 1.3, h: 0.9, d: 1.0, wall: '#f3eefc', roof: C.purple, roofH: 0.6 });
+    hall.add(box(0.22, 0.5, 0.22, C.purple, 0, 1.45));
+    const bell = cone(0.12, 0.18, C.sun, 8, 0, 1.95); hall.add(bell);
+    put(isl, 0, hall, 0, -0.1, Math.atan2(-isl.position.x + STAFF_CENTER.x, -isl.position.z + STAFF_CENTER.z));
+    // 公告欄
+    const board = new THREE.Group();
+    board.add(box(0.06, 0.6, 0.06, C.woodDark, -0.32)); board.add(box(0.06, 0.6, 0.06, C.woodDark, 0.32));
+    board.add(box(0.8, 0.5, 0.05, '#fffaf0', 0, 0.42));
+    [[-0.2, 0.62, C.coral], [0.12, 0.66, C.sun], [-0.05, 0.5, C.sky], [0.2, 0.5, C.mint]].forEach(([x, y, c]) => board.add(box(0.18, 0.14, 0.02, c, x, y - 0.07, 0.035)));
+    put(isl, 6, board, 0, 0, 0.3);
+    [1, 3, 5].forEach((i) => put(isl, i, lamp(), 0.3, 0.2));
+    [2, 4].forEach((i) => put(isl, i, tree('round', 0.9)));
+  },
+  'st-files'(isl) {
+    const wh = new THREE.Group();
+    wh.add(box(1.6, 0.7, 0.9, '#e3eef8'));
+    const r = gableRoof(1.6, 0.4, 0.9, C.sky); r.position.y = 0.7; wh.add(r);
+    wh.add(box(0.5, 0.45, 0.02, C.woodDark, 0, 0, 0.46));
+    put(isl, 0, wh, 0, -0.1, 0.4);
+    const cols = [C.coral, C.sun, C.sky, C.mint, C.purple, C.pink];
+    [1, 2, 4, 6].forEach((i, k) => {
+      for (let j = 0; j < 3; j++) put(isl, i, box(0.26, 0.22, 0.26, cols[(k + j) % cols.length]), -0.2 + (j % 2) * 0.3, -0.15 + j * 0.15);
+      put(isl, i, box(0.26, 0.22, 0.26, cols[(k + 3) % cols.length], 0, 0, 0)).position.y += 0.22;
+    });
+    put(isl, 3, lamp(), 0, 0); put(isl, 5, tree('pine'), 0, 0);
+  },
+  'st-folders'(isl) {
+    const cols = ['#f2b544', '#6ba8d8', '#e97a5b', '#8fd3c1', '#a993d6', '#7fb85a', '#f49aa0'];
+    isl.userData.tiles.forEach((t, i) => {
+      for (let k = 0; k < (i ? 3 : 5); k++) {
+        const f = new THREE.Group();
+        f.add(box(0.5, 0.36, 0.05, cols[(i + k) % cols.length]));
+        f.add(box(0.2, 0.07, 0.05, cols[(i + k) % cols.length], -0.12, 0.36));
+        f.add(box(0.44, 0.3, 0.06, '#fffaf0', 0, 0.03, 0.01));
+        put(isl, i, f, -0.35 + k * 0.18, (k % 2 ? 0.12 : -0.12), (k - 1) * 0.15);
+      }
+    });
+  },
+  'st-stats'(isl) {
+    const tower = new THREE.Group();
+    tower.add(cyl(0.3, 0.38, 1.4, '#dff3e4', 10)); tower.add(cyl(0.48, 0.48, 0.1, C.leaf, 10, 0, 1.4));
+    tower.add(cyl(0.05, 0.05, 0.5, '#888', 6, 0, 1.5)); tower.add(ball(0.08, C.coral, 0, 2.05, 0, 1));
+    put(isl, 0, tower);
+    const cols = [C.coral, C.sun, C.sky, C.mint, C.purple];
+    [1, 3, 5].forEach((i, k) => {
+      for (let j = 0; j < 4; j++) {
+        const h = 0.2 + ((j * 37 + k * 17) % 7) * 0.08;
+        put(isl, i, box(0.14, h, 0.14, cols[(j + k) % cols.length]), -0.3 + j * 0.2, 0);
+      }
+    });
+    [2, 4, 6].forEach((i) => put(isl, i, tree('round', 0.8)));
+  },
   harbor(isl) {
     // 碼頭（往外海方向）
     const dock = new THREE.Group();
@@ -525,12 +581,14 @@ const builders = {
 
 // ================= 擺放小島 =================
 const RING = 9.6;
+const STAFF_CENTER = new THREE.Vector3(0, 0, -72); // 服事者群島在遠方，平常看不到
 const islandObjs = [];
-ISLANDS.forEach((def) => {
-  let cx = 0, cz = 0;
-  if (!def.center) { const a = THREE.MathUtils.degToRad(def.angle); cx = Math.cos(a) * RING; cz = -Math.sin(a) * RING; }
+function placeIsland(def, center, ring, group) {
+  let cx = center.x, cz = center.z;
+  if (!def.center) { const a = THREE.MathUtils.degToRad(def.angle); cx += Math.cos(a) * ring; cz += -Math.sin(a) * ring; }
   const isl = buildIsland(def, cx, cz);
-  const out = new THREE.Vector3(cx, 0, cz).normalize();
+  isl.userData.group = group;
+  const out = new THREE.Vector3(cx - center.x, 0, cz - center.z).normalize();
   isl.userData.outward = out;
   // 最外側的磚（給碼頭用）
   let best = 0, bestD = -Infinity;
@@ -543,13 +601,14 @@ ISLANDS.forEach((def) => {
   isl.userData.phase = Math.random() * Math.PI * 2;
   scene.add(isl);
   islandObjs.push(isl);
-});
-
+  return isl;
+}
 // 木棧橋：中央 → 各島
-islandObjs.slice(1).forEach((isl) => {
-  const dir = isl.position.clone().normalize();
-  const len = RING - 5.0;
-  const start = dir.clone().multiplyScalar(2.5);
+function bridge(isl, center, ring) {
+  const dir = isl.position.clone().sub(center).normalize();
+  const len = ring - 5.0;
+  const start = center.clone().addScaledVector(dir, 2.5);
+  const planks = [];
   const n = Math.round(len / 0.24);
   const ang = Math.atan2(dir.x, dir.z);
   for (let k = 0; k <= n; k++) {
@@ -558,8 +617,12 @@ islandObjs.slice(1).forEach((isl) => {
     plank.position.set(p.x, -0.12 + Math.sin((k / n) * Math.PI) * 0.12, p.z);
     plank.rotation.y = ang;
     scene.add(plank);
+    planks.push(plank);
   }
-});
+  return planks;
+}
+ISLANDS.forEach((def) => placeIsland(def, HOME_TARGET, RING, 'main'));
+islandObjs.slice(1).forEach((isl) => bridge(isl, HOME_TARGET, RING));
 
 // ================= 島民 =================
 const islanders = createIslanders({ islands: islandObjs, onTick, lowEnd: LOW_END });
@@ -634,7 +697,8 @@ for (let k = 0; k < 5; k++) {
 // ================= 標籤（Pins）=================
 const pinsEl = document.getElementById('pins');
 addEventListener('resize', () => pinEls.forEach((el) => { el._w = 0; }));
-const pinEls = islandObjs.map((isl) => {
+const pinEls = [];
+function makePin(isl) {
   const def = isl.userData.def;
   const el = document.createElement('button');
   el.className = 'pin';
@@ -644,8 +708,10 @@ const pinEls = islandObjs.map((isl) => {
   el.addEventListener('pointerenter', () => { hovered = isl; });
   el.addEventListener('pointerleave', () => { if (hovered === isl) hovered = null; });
   pinsEl.appendChild(el);
+  pinEls.push(el);
   return el;
-});
+}
+islandObjs.forEach(makePin);
 
 // 自己島民頭上的名字
 const mePin = document.createElement('div');
@@ -741,6 +807,7 @@ const creator = createCreator({
 let authGen = 0;
 store.onUser(async (u) => {
   const gen = ++authGen;
+  refreshStaffAccess(u);
   myPid = null;
   isAdminNow = false;
   closeWhoCard();
@@ -819,13 +886,63 @@ function openFishing() { setMenu(false); fishing.open(); }
 document.getElementById('fishBtn').addEventListener('click', openFishing);
 new MutationObserver(updateFishCount).observe(document.querySelector('.fishing'), { attributes: true, attributeFilter: ['hidden'] });
 addEventListener('pointerdown', (e) => { if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false); });
-ISLANDS.forEach((d) => {
-  const b = document.createElement('button');
-  b.dataset.id = d.id;
-  b.innerHTML = `<span class="mi-em" aria-hidden="true">${d.emoji}</span><span class="mi-text"><b>${d.short}</b>${d.name !== d.short ? `<small>${d.name}</small>` : ''}</span>`;
-  b.addEventListener('click', () => { setMenu(false); openIsland(d.id); });
-  dock.appendChild(b);
-});
+function renderMenu() {
+  dock.innerHTML = '';
+  (arch === 'staff' ? staff.STAFF_ISLANDS : ISLANDS).forEach((d) => {
+    const b = document.createElement('button');
+    b.dataset.id = d.id;
+    b.innerHTML = `<span class="mi-em" aria-hidden="true">${d.emoji}</span><span class="mi-text"><b>${d.short}</b>${d.name !== d.short ? `<small>${d.name}</small>` : ''}</span>`;
+    b.addEventListener('click', () => { setMenu(false); openIsland(d.id); });
+    dock.appendChild(b);
+  });
+  document.querySelector('.menu-head b').textContent = arch === 'staff' ? '服事者群島' : '小島目錄';
+}
+
+// ================= 服事者群島 =================
+// 登入的人如果在青少年服事文件 Google Drive 的共用名單裏，就會出現入口
+let arch = 'main';
+let staffBuilt = false;
+const staffExtras = [];
+const archBtn = document.getElementById('archBtn');
+function buildStaffArchipelago() {
+  if (staffBuilt) return;
+  staffBuilt = true;
+  staff.STAFF_ISLANDS.forEach((def) => makePin(placeIsland(def, STAFF_CENTER, 7.5, 'staff')));
+  islandObjs.filter((i) => i.userData.group === 'staff' && !i.userData.def.center).forEach((isl) => staffExtras.push(...bridge(isl, STAFF_CENTER, 7.5)));
+}
+function setStaffVisible(v) {
+  islandObjs.forEach((i) => { if (i.userData.group === 'staff') i.visible = v; });
+  staffExtras.forEach((o) => { o.visible = v; });
+}
+const archCenter = () => (arch === 'staff' ? STAFF_CENTER : HOME_TARGET);
+function homeView() { const c = archCenter(); return [HOME_POS.clone().add(c), c.clone()]; }
+function switchArch(to) {
+  if (to === arch) return;
+  closePanel();
+  setMenu(false);
+  arch = to;
+  if (to === 'staff') { buildStaffArchipelago(); setStaffVisible(true); }
+  sun.position.copy(archCenter()).add(new THREE.Vector3(18, 30, 12));
+  sun.target.position.copy(archCenter());
+  renderMenu();
+  archBtn.innerHTML = to === 'staff' ? '<span aria-hidden="true">🏝️</span><b>回青少年群島</b>' : '<span aria-hidden="true">🗝️</span><b>服事者群島</b>';
+  document.body.classList.toggle('staff-mode', to === 'staff');
+  stopAuto();
+  flyTo(...homeView(), 1.6);
+  if (to === 'staff') {
+    setTimeout(() => openIsland('st-hub'), 1700);
+    if (staff.state.status !== 'ready') staff.loadDashboard().then(() => { if (selected?.userData.group === 'staff') renderPanel(); });
+  } else setTimeout(() => setStaffVisible(false), 1700);
+}
+archBtn.addEventListener('click', () => switchArch(arch === 'staff' ? 'main' : 'staff'));
+async function refreshStaffAccess(u) {
+  archBtn.hidden = true;
+  staff.reset();
+  if (arch === 'staff') switchArch('main');
+  if (!u || !staff.staffEnabled) return;
+  if (await staff.checkStaff()) archBtn.hidden = false;
+}
+renderMenu();
 
 // ================= 互動 =================
 const ray = new THREE.Raycaster();
@@ -838,7 +955,7 @@ function pickIsland(ev) {
   const r = canvas.getBoundingClientRect();
   ptr.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  const hit = ray.intersectObjects(islandObjs, true)[0];
+  const hit = ray.intersectObjects(islandObjs.filter((i) => i.userData.group === arch), true)[0];
   if (!hit) return null;
   let o = hit.object;
   while (o && !o.userData.id) o = o.parent;
@@ -952,7 +1069,7 @@ function focusMine() {
 }
 function goHome() {
   closePanel();
-  flyTo(HOME_POS.clone(), HOME_TARGET.clone(), 1.3);
+  flyTo(...homeView(), 1.3);
 }
 document.getElementById('panelClose').addEventListener('click', goHome);
 // 手機：從面板頂端往下拖可關閉
@@ -983,6 +1100,7 @@ addEventListener('keydown', (e) => {
 });
 panelBody.addEventListener('click', (e) => {
   if (e.target.closest('[data-open="fishing"]')) return openFishing();
+  if (e.target.closest('[data-staff="refresh"]')) { staff.loadDashboard(true).then(renderPanel); renderPanel(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) {
     const anchor = g.dataset.anchor;
@@ -1104,7 +1222,7 @@ function frame() {
   islandObjs.forEach((isl, i) => {
     tmpV.set(isl.position.x, isl.position.y + 3.6, isl.position.z).project(camera);
     const el = pinEls[i];
-    const vis = tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
+    const vis = isl.userData.group === arch && tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
     el.classList.toggle('hidden', !vis);
     el.classList.toggle('hover', isl === hovered);
     el.classList.toggle('dim', !!selected && isl !== selected);

@@ -1,6 +1,7 @@
 // 服事者專區：身分確認與 Drive 即時資料（透過 apps-script/Code.gs）
 import { STAFF_API } from './staff-config.js';
 import { idToken } from './store.js';
+import { panelSummary } from './chlife.js';
 
 export const staffEnabled = !!STAFF_API;
 export const state = { status: 'idle', data: null, error: null, email: null };
@@ -34,7 +35,23 @@ export async function loadDashboard(force = false) {
   }
   return state;
 }
-export function reset() { Object.assign(state, { status: 'idle', data: null, error: null, email: null }); }
+// 召會生活人數統計（試算表），和 Drive 檔案清單分開讀
+export const chlifeState = { status: 'idle', data: null, error: null };
+export async function loadChlife(force = false) {
+  chlifeState.status = 'loading';
+  try {
+    const r = await call('chlife', { force });
+    if (!r.ok) throw new Error(r.error);
+    chlifeState.data = r.data; chlifeState.status = 'ready'; chlifeState.error = null;
+  } catch (err) {
+    chlifeState.status = 'error'; chlifeState.error = err.message;
+  }
+  return chlifeState;
+}
+export function reset() {
+  Object.assign(state, { status: 'idle', data: null, error: null, email: null });
+  Object.assign(chlifeState, { status: 'idle', data: null, error: null });
+}
 
 // ---------- 畫面 ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -87,11 +104,23 @@ export const STAFF_ISLANDS = [
     render: () => wrap(STAFF_ISLANDS[1], '整個資料夾最近更新的檔案', (d) => sec('最近更新', fileList(d.recent))),
   },
   {
-    id: 'st-folders', name: '資料夾島', short: '資料夾', emoji: '📁', tint: '#fff0c2', angle: 210, staff: true,
+    id: 'st-folders', name: '資料夾島', short: '資料夾', emoji: '📁', tint: '#fff0c2', angle: 180, staff: true,
     render: () => wrap(STAFF_ISLANDS[2], '青少年服事文件的所有資料夾', (d) => sec(`共 ${d.folders.length} 個資料夾`, fileList(d.folders.map((f) => ({ ...f, mime: 'folder', updated: d.generatedAt }))).replace(/<small>[^<]*<\/small>/g, ''))),
   },
   {
-    id: 'st-stats', name: '統計瞭望台', short: '統計與規劃', emoji: '📊', tint: '#dff3e4', angle: 330, staff: true,
+    id: 'st-stats', name: '統計瞭望台', short: '統計與規劃', emoji: '📊', tint: '#dff3e4', angle: 0, staff: true,
     render: () => wrap(STAFF_ISLANDS[3], '人數統計、行事曆與年度規劃', (d) => sec('📊 統計報表', fileList(d.stats)) + sec('📅 行事曆與規劃', fileList(d.plans))),
+  },
+  {
+    id: 'st-chlife', name: '召會生活統計島', short: '人數統計', emoji: '📈', tint: '#dcecfb', angle: 270, staff: true,
+    render: () => {
+      const d = STAFF_ISLANDS[4], c = chlifeState;
+      const body = c.status === 'error' && !c.data ? `<p class="cr-warn">讀取失敗（${esc(c.error)}）。</p>`
+        : !c.data ? (c.status === 'ready' ? '<p class="hint">還沒有設定統計試算表（Apps Script 指令碼屬性 STATS_SHEET_ID）。</p>' : '<p class="hint">正在讀取試算表…</p>')
+          : panelSummary(c.data);
+      return hero(d, '五項聚會人數：主日、小排、家聚會、福音出訪、禱告')
+        + sec('主日（全體）', body + '<button class="btn-primary st-open" data-open="chlife">📈 打開統計看板</button>')
+        + sec('', '<p class="hint">資料即時讀取「青少年聚會人數統計_總表」試算表，最多 5 分鐘更新一次。看板裏可以切換聚會項目、照顧區和小區。</p>');
+    },
   },
 ];

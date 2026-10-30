@@ -8,6 +8,7 @@ import { createFishing, remainingToday } from './fishing.js';
 import * as staff from './staff.js';
 import { createPeople } from './people.js';
 import { createTsunami } from './tsunami.js';
+import { createChlife } from './chlife.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -503,6 +504,31 @@ const builders = {
     });
     [2, 4, 6].forEach((i) => put(isl, i, tree('round', 0.8)));
   },
+  'st-chlife'(isl) {
+    // 立體長條圖：五項聚會
+    const chart = new THREE.Group();
+    chart.add(box(1.5, 0.08, 0.6, '#f5f1e8'));
+    [[0.95, C.sky], [0.75, C.mint], [0.6, C.sun], [0.35, C.coral], [0.3, C.purple]].forEach(([h, c], k) => chart.add(box(0.2, h, 0.3, c, -0.56 + k * 0.28, 0.08)));
+    put(isl, 0, chart, 0, -0.05, 0.25);
+    // 折線看板
+    const board = new THREE.Group();
+    board.add(box(0.06, 0.7, 0.06, C.woodDark, -0.38)); board.add(box(0.06, 0.7, 0.06, C.woodDark, 0.38));
+    board.add(box(0.9, 0.55, 0.05, '#ffffff', 0, 0.5));
+    const pts = [[-0.34, 0.6], [-0.17, 0.68], [0, 0.64], [0.17, 0.8], [0.34, 0.9]];
+    pts.slice(1).forEach(([x2, y2], k) => {
+      const [x1, y1] = pts[k];
+      const seg = box(Math.hypot(x2 - x1, y2 - y1), 0.035, 0.02, '#2a78d6', (x1 + x2) / 2, (y1 + y2) / 2 - 0.0175, 0.035);
+      seg.rotation.z = Math.atan2(y2 - y1, x2 - x1);
+      board.add(seg);
+    });
+    put(isl, 3, board, 0, 0, 0.5);
+    // 小金字塔（年齡結構）
+    const pyr = new THREE.Group();
+    [0.62, 0.48, 0.34, 0.2].forEach((w, k) => pyr.add(box(w, 0.12, w * 0.6, [C.sky, C.mint, C.sun, C.coral][k], 0, k * 0.12)));
+    put(isl, 5, pyr);
+    [1, 4].forEach((i) => put(isl, i, tree('round', 0.85)));
+    put(isl, 2, lamp(), 0.2, 0.1); put(isl, 6, lamp(), -0.2, 0.1);
+  },
   harbor(isl) {
     // 碼頭（往外海方向）
     const dock = new THREE.Group();
@@ -992,12 +1018,14 @@ function switchArch(to) {
   if (to === 'staff') {
     setTimeout(() => openIsland('st-hub'), 1700);
     if (staff.state.status !== 'ready') staff.loadDashboard().then(() => { if (selected?.userData.group === 'staff') renderPanel(); });
+    if (staff.chlifeState.status === 'idle') staff.loadChlife().then(() => { if (selected?.userData.id === 'st-chlife') renderPanel(); });
   } else setTimeout(() => setStaffVisible(false), 1700);
 }
 archBtn.addEventListener('click', () => switchArch(arch === 'staff' ? 'main' : 'staff'));
 async function refreshStaffAccess(u) {
   archBtn.hidden = true;
   staff.reset();
+  chlife.close();
   if (arch === 'staff') switchArch('main');
   if (!u || !staff.staffEnabled) return;
   if (await staff.checkStaff()) archBtn.hidden = false;
@@ -1166,6 +1194,7 @@ addEventListener('keydown', (e) => {
 });
 panelBody.addEventListener('click', (e) => {
   if (e.target.closest('[data-open="fishing"]')) return openFishing();
+  if (e.target.closest('[data-open="chlife"]')) return chlife.open();
   if (e.target.closest('[data-staff="refresh"]')) { staff.loadDashboard(true).then(renderPanel); renderPanel(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) {
@@ -1243,7 +1272,7 @@ addEventListener('resize', resize);
 resize();
 
 // 釣魚或捏島民的視窗打開時，暫停後面的 3D 畫面（省電，也讓 QTE 在低階手機上反應即時）
-const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden])');
+const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden]), .chlife:not([hidden])');
 function frame() {
   if (overlays()) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1326,6 +1355,9 @@ if (location.hash && ISLANDS.some((i) => i.id === location.hash.slice(1))) {
   intro.classList.add('gone');
   setTimeout(() => openIsland(location.hash.slice(1)), 300);
 }
+// 召會生活人數統計看板（服事者群島）
+const chlife = createChlife({ load: (force) => staff.loadChlife(force), getState: () => staff.chlifeState });
+
 // 重大行動的海嘯警報
 const tsunami = createTsunami({
   today: taipeiNow().date,

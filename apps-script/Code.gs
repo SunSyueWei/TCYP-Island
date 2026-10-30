@@ -11,6 +11,9 @@
  *   ANNOUNCE_DOC_ID    「服事者公告」Google 文件的 ID（選填）
  *   EXTRA_STAFF        額外允許的 Email，逗號分隔（選填）
  *   BLOCKED_STAFF      就算在共用名單也不允許的 Email，逗號分隔（選填）
+ *   STATS_SHEET_ID     「青少年聚會人數統計_總表」的檔案 ID（選填；填了才有召會生活統計島的圖表）
+ *                      Google 試算表或上傳的 Excel（.xlsx）都可以；Excel 會自動轉成一份 Google 試算表副本來讀，
+ *                      副本放在部署者的「我的雲端硬碟」，原檔更新時才重新轉換（舊副本會移到垃圾桶）
  */
 var CACHE_SECONDS = 300; // Drive 資料最多 5 分鐘更新一次
 var props = PropertiesService.getScriptProperties();
@@ -23,6 +26,7 @@ function doPost(e) {
     if (!isStaff_(email)) return json_({ ok: false, error: 'forbidden' });
     if (req.action === 'whoami') return json_({ ok: true, email: email });
     if (req.action === 'dashboard') return json_({ ok: true, email: email, data: dashboard_(req.force === true) });
+    if (req.action === 'chlife') return json_({ ok: true, email: email, data: chlife_(req.force === true) });
     return json_({ ok: false, error: 'bad-request' });
   } catch (err) {
     console.error(err);
@@ -133,4 +137,113 @@ function announce_() {
   var res = UrlFetchApp.fetch(driveUrl_('files/' + id + '/export', { mimeType: 'text/plain' }), { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
   var text = res.getResponseCode() === 200 ? res.getContentText().replace(/^﻿/, '').slice(0, 6000) : '';
   return { title: meta.name, updated: meta.modifiedTime, url: meta.webViewLink, text: text };
+}
+
+// ---------- 召會生活人數統計（讀「青少年聚會人數統計_總表」各聚會的週報表）----------
+var MEETINGS = [
+  { key: 'lord', label: '主日', sheet: '主日_週報表' },
+  { key: 'group', label: '小排', sheet: '小排_週報表' },
+  { key: 'home', label: '家聚會', sheet: '家聚會_週報表' },
+  { key: 'gospel', label: '福音出訪', sheet: '福音出訪_週報表' },
+  { key: 'prayer', label: '禱告', sheet: '禱告_週報表' },
+];
+
+function chlife_(force) {
+  var id = props.getProperty('STATS_SHEET_ID');
+  if (!id) return null;
+  var cache = CacheService.getScriptCache();
+  if (!force) { var hit = cache.get('chlife'); if (hit) return JSON.parse(hit); }
+  var ss = openStats_(id);
+  var data = {
+    generatedAt: new Date().toISOString(),
+    title: ss.title,
+    url: ss.url,
+    meetings: MEETINGS.map(function (m) {
+      var sh = ss.book.getSheetByName(m.sheet);
+      var parsed = sh ? parseReport_(sh.getDataRange().getDisplayValues()) : null;
+      return parsed ? Object.assign({ key: m.key, label: m.label }, parsed) : { key: m.key, label: m.label, missing: true };
+    }),
+  };
+  var s = JSON.stringify(data);
+  if (s.length < 95000) cache.put('chlife', s, CACHE_SECONDS);
+  return data;
+}
+
+var SHEET_MIME = 'application/vnd.google-apps.spreadsheet';
+function openStats_(id) {
+  var meta = driveGet_('files/' + id, { fields: 'id,name,mimeType,modifiedTime,webViewLink', supportsAllDrives: true });
+  if (meta.mimeType === SHEET_MIME) return { book: SpreadsheetApp.openById(id), title: meta.name, url: meta.webViewLink };
+  // Excel：原檔沒變就沿用上次轉好的副本
+  var conv = JSON.parse(props.getProperty('STATS_CONVERTED') || 'null');
+  var book = null;
+  if (conv && conv.src === id && conv.modified === meta.modifiedTime) {
+    try { book = SpreadsheetApp.openById(conv.id); } catch (e) { book = null; }
+  }
+  if (!book) {
+    var res = UrlFetchApp.fetch(driveUrl_('files/' + id + '/copy', { fields: 'id', supportsAllDrives: true }), {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+      payload: JSON.stringify({ name: '（網站自動轉換，請勿編輯）' + meta.name.replace(/\.xlsx?$/i, ''), mimeType: SHEET_MIME }),
+    });
+    if (res.getResponseCode() !== 200) throw new Error('convert ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 200));
+    var newId = JSON.parse(res.getContentText()).id;
+    if (conv && conv.id) {
+      UrlFetchApp.fetch(driveUrl_('files/' + conv.id, {}), { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }), headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+    }
+    props.setProperty('STATS_CONVERTED', JSON.stringify({ src: id, modified: meta.modifiedTime, id: newId }));
+    book = SpreadsheetApp.openById(newId);
+  }
+  // 連結指向原檔，大家照常在原檔更新
+  return { book: book, title: meta.name.replace(/\.xlsx?$/i, ''), url: meta.webViewLink };
+}
+
+// 週報表 → { months, weeks, units: [{ care, name, base, target, months, avg, weeks }], total }
+// 依標題文字找欄位，欄位順序或週數變動都不影響；照顧區服事者姓名等其他欄位不會送出
+function parseReport_(v) {
+  var h = -1;
+  for (var r = 0; r < Math.min(v.length, 10); r++) if (String(v[r][0]).trim() === '照顧區') { h = r; break; }
+  if (h < 0) return null;
+  var head = v[h].map(function (x) { return String(x).trim(); });
+  var above = h > 0 ? v[h - 1].map(function (x) { return String(x).trim(); }) : [];
+  var nameCol = head.indexOf('青少年小區');
+  var baseCol = head.indexOf('基數');
+  var targetCol = head.indexOf('目標');
+  var avgCol = head.indexOf('全年平均');
+  if (nameCol < 0 || avgCol < 0) return null;
+  var monthCols = [], weekCols = [], weeks = [];
+  head.forEach(function (x, j) {
+    if (/^\d{1,2}月$/.test(x)) monthCols.push(j);
+    else if (j > avgCol && /^\d{1,2}\/\d{1,2}$/.test(x)) {
+      weekCols.push(j);
+      weeks.push(/^\d{1,2}\/\d{1,2}$/.test(above[j] || '') ? above[j] : x); // 上一列是該週主日日期
+    }
+  });
+  var num = function (x) {
+    var s = String(x == null ? '' : x).replace(/,/g, '').trim();
+    if (s === '') return null;
+    var n = Number(s);
+    return isFinite(n) ? n : null;
+  };
+  var pick = function (row) {
+    return {
+      base: baseCol >= 0 ? num(row[baseCol]) : null,
+      target: targetCol >= 0 ? num(row[targetCol]) : null,
+      months: monthCols.map(function (j) { return num(row[j]); }),
+      avg: num(row[avgCol]),
+      weeks: weekCols.map(function (j) { return num(row[j]); }),
+    };
+  };
+  var units = [], total = null, care = '';
+  for (var i = h + 1; i < v.length; i++) {
+    var row = v[i];
+    var name = String(row[nameCol] || '').trim();
+    if (String(row[0] || '').trim()) care = String(row[0]).trim();
+    if (!name) continue;
+    if (/總\s*計|合\s*計/.test(name.replace(/　/g, ''))) { total = pick(row); break; }
+    var u = pick(row);
+    u.care = care;
+    u.name = name;
+    units.push(u);
+  }
+  return { months: monthCols.map(function (j) { return head[j]; }), weeks: weeks, units: units, total: total, hasBase: baseCol >= 0 };
 }

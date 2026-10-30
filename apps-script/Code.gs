@@ -279,3 +279,22 @@ function parseReport_(v) {
   }
   return { months: monthCols.map(function (j) { return head[j]; }), weeks: weeks, units: units, total: total, hasBase: baseCol >= 0 };
 }
+
+// ---------- 在 Apps Script 編輯器裏檢查用 ----------
+// 上方函式選單選 testStats → 按「執行」。第一次會要求授權；執行記錄會顯示讀到什麼或錯在哪裏。
+// （doPost 只能由網站呼叫，在編輯器直接執行一定會出現 postData 的錯誤，那是正常的）
+function testStats() {
+  var id = props.getProperty('STATS_SHEET_ID');
+  if (!id) { console.log('❌ 還沒設定指令碼屬性 STATS_SHEET_ID'); return; }
+  console.log('檔案 ID：' + id);
+  var meta = driveGet_('files/' + id, { fields: 'name,mimeType,modifiedTime', supportsAllDrives: true });
+  console.log('✅ 讀得到檔案：' + meta.name + '（' + meta.mimeType + '，更新於 ' + meta.modifiedTime + '）');
+  var data = chlife_(true);
+  data.meetings.forEach(function (m) {
+    if (m.missing) { console.log('⚠️ ' + m.label + '：找不到分頁'); return; }
+    var last = -1;
+    (m.total ? m.total.weeks : []).forEach(function (v, i) { if (v != null) last = i; });
+    console.log('✅ ' + m.label + '：' + m.units.length + ' 個小區，最近一週 ' + (m.weeks[last] || '—') + ' 共 ' + (last >= 0 ? m.total.weeks[last] : '—') + ' 人');
+  });
+  console.log('全部完成，網站上按「重新整理」就看得到。');
+}

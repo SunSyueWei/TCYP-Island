@@ -113,6 +113,7 @@ t('v3 轉換失敗時改用 v2', () => { v3CopyFails = true; xlsxModified = 'T3'
 const benv = makeEnv({ users: { good: { email: 'staff@gmail.com', emailVerified: true } }, perms: [{ type: 'user', emailAddress: 'staff@gmail.com' }], props: { ROOT_FOLDER_ID: 'ROOT', FIREBASE_API_KEY: 'k', STATS_SHEET_ID: 'NOPE' } });
 t('服事者遇到錯誤會看到原因', () => { const r = benv.post({ action: 'chlife', idToken: 'good' }); assert.equal(r.error, 'server'); assert.ok(/Drive 404/.test(r.detail)); });
 t('驗證前的錯誤不回傳細節', () => assert.equal(benv.ctx.doPost({ postData: { contents: '{bad' } }).detail, undefined));
+t('testStats 可以在編輯器執行', () => { const logs = []; const orig = xenv.ctx.console; xenv.ctx.console = { log: (m) => logs.push(m), error() {} }; xenv.ctx.testStats(); xenv.ctx.console = orig; assert.ok(logs.some((l) => l.includes('✅ 主日：3 個小區'))); assert.ok(logs.some((l) => l.includes('⚠️ 小排'))); });
 t('壞 JSON → server 錯誤', () => assert.equal(env.ctx.doPost({ postData: { contents: '{bad' } }).error, 'server'));
 console.log(results.join('\n'));
 console.log(results.filter((r) => r.startsWith('PASS')).length + '/' + results.length);

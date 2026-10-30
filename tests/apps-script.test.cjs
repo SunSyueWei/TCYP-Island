@@ -1,7 +1,7 @@
 // 服事者專區 Apps Script 測試：用模擬的 Google 服務驗證權限判斷與資料整理。用法：node tests/apps-script.test.cjs
 const fs = require('fs'); const vm = require('vm'); const assert = require('assert');
 const code = fs.readFileSync(require('path').join(__dirname, '../apps-script/Code.gs'), 'utf8');
-let convN = 0, xlsxModified = 'T1';
+let convN = 0, xlsxModified = 'T1', v3CopyFails = false;
 function makeEnv({ users = {}, perms = [], props = {}, tree = {}, sheets = {} } = {}) {
   const calls = [];
   const resp = (code, obj) => ({ getResponseCode: () => code, getContentText: () => (typeof obj === 'string' ? obj : JSON.stringify(obj)) });
@@ -17,7 +17,9 @@ function makeEnv({ users = {}, perms = [], props = {}, tree = {}, sheets = {} } 
     const pm = q.match(/'([^']+)' in parents/);
     if (pm) return resp(200, { files: tree[pm[1]] || [] });
     const cp = url.match(/files\/([^/?]+)\/copy/);
+    if (cp && v3CopyFails && url.includes('/drive/v3/')) return resp(400, { error: { message: 'conversion not supported' } });
     if (cp) { const nid = 'CONV' + (++convN); sheets[nid] = sheets[cp[1]]; return resp(200, { id: nid }); }
+    if (/files\/NOPE\b/.test(url)) return resp(404, { error: { message: 'File not found' } });
     if (/files\/(SHEET|XLSX)\?/.test(url)) {
       const id = url.match(/files\/(\w+)\?/)[1];
       return resp(200, { id, name: id === 'XLSX' ? '總表.xlsx' : '總表', mimeType: id === 'XLSX' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.google-apps.spreadsheet', modifiedTime: xlsxModified, webViewLink: 'https://docs.google.com/spreadsheets/d/' + id + '/edit' });
@@ -107,6 +109,10 @@ let xc;
 t('Excel：轉換後可以讀', () => { xc = xenv.post({ action: 'chlife', idToken: 'good' }).data; assert.equal(xc.meetings[0].units.length, 3); assert.equal(xc.title, '總表'); assert.ok(xc.url.includes('/XLSX/')); });
 t('Excel：原檔沒變不重新轉換', () => { const n = xenv.calls.length; xenv.post({ action: 'chlife', idToken: 'good', force: true }); assert.equal(xenv.calls.slice(n).filter((u) => u.includes('/copy')).length, 0); });
 t('Excel：原檔更新才重新轉換、舊副本丟垃圾桶', () => { xlsxModified = 'T2'; const n = xenv.calls.length; xenv.post({ action: 'chlife', idToken: 'good', force: true }); const c2 = xenv.calls.slice(n); assert.equal(c2.filter((u) => u.includes('/copy')).length, 1); assert.ok(c2.some((u) => /files\/CONV1$/.test(u))); });
+t('v3 轉換失敗時改用 v2', () => { v3CopyFails = true; xlsxModified = 'T3'; const n = xenv.calls.length; const r = xenv.post({ action: 'chlife', idToken: 'good', force: true }); v3CopyFails = false; assert.equal(r.ok, true); assert.ok(xenv.calls.slice(n).some((u) => u.includes('/drive/v2/files/XLSX/copy?convert=true'))); });
+const benv = makeEnv({ users: { good: { email: 'staff@gmail.com', emailVerified: true } }, perms: [{ type: 'user', emailAddress: 'staff@gmail.com' }], props: { ROOT_FOLDER_ID: 'ROOT', FIREBASE_API_KEY: 'k', STATS_SHEET_ID: 'NOPE' } });
+t('服事者遇到錯誤會看到原因', () => { const r = benv.post({ action: 'chlife', idToken: 'good' }); assert.equal(r.error, 'server'); assert.ok(/Drive 404/.test(r.detail)); });
+t('驗證前的錯誤不回傳細節', () => assert.equal(benv.ctx.doPost({ postData: { contents: '{bad' } }).detail, undefined));
 t('壞 JSON → server 錯誤', () => assert.equal(env.ctx.doPost({ postData: { contents: '{bad' } }).error, 'server'));
 console.log(results.join('\n'));
 console.log(results.filter((r) => r.startsWith('PASS')).length + '/' + results.length);

@@ -19,18 +19,23 @@ var CACHE_SECONDS = 300; // Drive 資料最多 5 分鐘更新一次
 var props = PropertiesService.getScriptProperties();
 
 function doPost(e) {
+  var staffOk = false;
   try {
     var req = JSON.parse(e.postData.contents);
     var email = verifyFirebaseToken_(String(req.idToken || ''));
     if (!email) return json_({ ok: false, error: 'unauthenticated' });
     if (!isStaff_(email)) return json_({ ok: false, error: 'forbidden' });
+    staffOk = true;
     if (req.action === 'whoami') return json_({ ok: true, email: email });
     if (req.action === 'dashboard') return json_({ ok: true, email: email, data: dashboard_(req.force === true) });
     if (req.action === 'chlife') return json_({ ok: true, email: email, data: chlife_(req.force === true) });
     return json_({ ok: false, error: 'bad-request' });
   } catch (err) {
     console.error(err);
-    return json_({ ok: false, error: 'server' });
+    // 錯誤原因只給已確認的服事者看（方便除錯）；驗證前的錯誤不回傳細節
+    var out = { ok: false, error: 'server' };
+    if (staffOk) out.detail = String((err && err.message) || err).replace(/key=[^&\s]+/g, 'key=…').slice(0, 300);
+    return json_(out);
   }
 }
 
@@ -180,13 +185,7 @@ function openStats_(id) {
     try { book = SpreadsheetApp.openById(conv.id); } catch (e) { book = null; }
   }
   if (!book) {
-    var res = UrlFetchApp.fetch(driveUrl_('files/' + id + '/copy', { fields: 'id', supportsAllDrives: true }), {
-      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-      headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-      payload: JSON.stringify({ name: '（網站自動轉換，請勿編輯）' + meta.name.replace(/\.xlsx?$/i, ''), mimeType: SHEET_MIME }),
-    });
-    if (res.getResponseCode() !== 200) throw new Error('convert ' + res.getResponseCode() + ' ' + res.getContentText().slice(0, 200));
-    var newId = JSON.parse(res.getContentText()).id;
+    var newId = convertToSheet_(id, '（網站自動轉換，請勿編輯）' + meta.name.replace(/\.xlsx?$/i, ''));
     if (conv && conv.id) {
       UrlFetchApp.fetch(driveUrl_('files/' + conv.id, {}), { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }), headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
     }
@@ -195,6 +194,39 @@ function openStats_(id) {
   }
   // 連結指向原檔，大家照常在原檔更新
   return { book: book, title: meta.name.replace(/\.xlsx?$/i, ''), url: meta.webViewLink };
+}
+
+// Excel → Google 試算表：依序試三種方法，全部失敗才回報錯誤
+function convertToSheet_(id, name) {
+  var auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
+  var errors = [];
+  var tryFetch = function (label, url, opts) {
+    var res = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true, headers: auth }, opts));
+    if (res.getResponseCode() === 200) return JSON.parse(res.getContentText()).id;
+    errors.push(label + ' ' + res.getResponseCode() + ' ' + res.getContentText().replace(/\s+/g, ' ').slice(0, 120));
+    return null;
+  };
+  // 1. Drive v3 複製並轉換
+  var newId = tryFetch('v3copy', driveUrl_('files/' + id + '/copy', { fields: 'id', supportsAllDrives: true }),
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify({ name: name, mimeType: SHEET_MIME }) });
+  // 2. Drive v2 複製（convert=true）
+  if (!newId) newId = tryFetch('v2copy', 'https://www.googleapis.com/drive/v2/files/' + id + '/copy?convert=true&supportsAllDrives=true&fields=id',
+    { method: 'post', contentType: 'application/json', payload: JSON.stringify({ title: name }) });
+  // 3. 下載原檔再上傳成 Google 試算表
+  if (!newId) {
+    var dl = UrlFetchApp.fetch(driveUrl_('files/' + id, { alt: 'media', supportsAllDrives: true }), { headers: auth, muteHttpExceptions: true });
+    if (dl.getResponseCode() !== 200) errors.push('download ' + dl.getResponseCode());
+    else {
+      var boundary = 'tcyp' + Date.now();
+      var head = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: name, mimeType: SHEET_MIME })
+        + '\r\n--' + boundary + '\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n';
+      var body = Utilities.newBlob(head).getBytes().concat(dl.getContent()).concat(Utilities.newBlob('\r\n--' + boundary + '--').getBytes());
+      newId = tryFetch('upload', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        { method: 'post', contentType: 'multipart/related; boundary=' + boundary, payload: body });
+    }
+  }
+  if (!newId) throw new Error('Excel 轉換失敗：' + errors.join('｜'));
+  return newId;
 }
 
 // 週報表 → { months, weeks, units: [{ care, name, base, target, months, avg, weeks }], total }

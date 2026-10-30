@@ -41,7 +41,7 @@ export async function loadChlife(force = false) {
   chlifeState.status = 'loading';
   try {
     const r = await call('chlife', { force });
-    if (!r.ok) throw new Error(r.error);
+    if (!r.ok) throw new Error(r.detail ? `${r.error}：${r.detail}` : r.error);
     chlifeState.data = r.data; chlifeState.status = 'ready'; chlifeState.error = null;
   } catch (err) {
     chlifeState.status = 'error'; chlifeState.error = err.message;

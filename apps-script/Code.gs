@@ -12,8 +12,7 @@
  *   EXTRA_STAFF        額外允許的 Email，逗號分隔（選填）
  *   BLOCKED_STAFF      就算在共用名單也不允許的 Email，逗號分隔（選填）
  *   STATS_SHEET_ID     「青少年聚會人數統計_總表」的檔案 ID（選填；填了才有召會生活統計島的圖表）
- *                      Google 試算表或上傳的 Excel（.xlsx）都可以；Excel 會自動轉成一份 Google 試算表副本來讀，
- *                      副本放在部署者的「我的雲端硬碟」，原檔更新時才重新轉換（舊副本會移到垃圾桶）
+ *                      Google 試算表或上傳的 Excel（.xlsx）都可以；Excel 直接讀檔案裏存好的計算結果（和在 Excel 看到的一樣）
  */
 var CACHE_SECONDS = 300; // Drive 資料最多 5 分鐘更新一次
 var props = PropertiesService.getScriptProperties();
@@ -158,81 +157,123 @@ function chlife_(force) {
   if (!id) return null;
   var cache = CacheService.getScriptCache();
   if (!force) { var hit = cache.get('chlife'); if (hit) return JSON.parse(hit); }
-  var ss = openStats_(id);
+  var meta = driveGet_('files/' + id, { fields: 'id,name,mimeType,modifiedTime,webViewLink', supportsAllDrives: true });
+  // 檔案沒變就不重新解析（按重新整理也一樣），只更新讀取時間
+  var verKey = 'chlife:' + id + ':' + meta.modifiedTime;
+  var same = cache.get(verKey);
+  if (same) {
+    var d0 = JSON.parse(same);
+    d0.generatedAt = new Date().toISOString();
+    return d0;
+  }
+  var sheets = readBook_(id, meta.mimeType);
   var data = {
     generatedAt: new Date().toISOString(),
-    title: ss.title,
-    url: ss.url,
+    title: meta.name.replace(/\.xlsx?$/i, ''),
+    url: meta.webViewLink,
     meetings: MEETINGS.map(function (m) {
-      var sh = ss.book.getSheetByName(m.sheet);
-      var parsed = sh ? parseReport_(sh.getDataRange().getDisplayValues()) : null;
+      var values = findSheet_(sheets, m.sheet);
+      var parsed = values ? parseReport_(values) : null;
       return parsed ? Object.assign({ key: m.key, label: m.label }, parsed) : { key: m.key, label: m.label, missing: true };
     }),
+    sheetNames: Object.keys(sheets.names),
   };
   var s = JSON.stringify(data);
-  if (s.length < 95000) cache.put('chlife', s, CACHE_SECONDS);
+  if (s.length < 95000) { cache.put('chlife', s, CACHE_SECONDS); cache.put(verKey, s, 21600); }
   return data;
 }
 
+// 分頁名稱比對時忽略空白、底線（例如「福音出訪 週報表」「福音出訪＿週報表」都算）
+var normName_ = function (n) { return String(n).replace(/[\s_＿　]/g, ''); };
+function findSheet_(sheets, name) {
+  var want = normName_(name);
+  for (var n in sheets.names) if (normName_(n) === want) return sheets.get(n);
+  return null;
+}
+
+// 讀整本試算表：Google 試算表用 SpreadsheetApp；Excel 直接解開 .xlsx 讀 Excel 存好的計算結果（不轉換、不建立副本）
+// 回傳 { names: {分頁名稱: true}, get(name) → 2D 字串陣列 }
 var SHEET_MIME = 'application/vnd.google-apps.spreadsheet';
-function openStats_(id) {
-  var meta = driveGet_('files/' + id, { fields: 'id,name,mimeType,modifiedTime,webViewLink', supportsAllDrives: true });
-  if (meta.mimeType === SHEET_MIME) return { book: SpreadsheetApp.openById(id), title: meta.name, url: meta.webViewLink };
-  // Excel：原檔沒變就沿用上次轉好的副本
-  var conv = JSON.parse(props.getProperty('STATS_CONVERTED') || 'null');
-  var book = null;
-  if (conv && conv.src === id && conv.modified === meta.modifiedTime) {
-    try { book = SpreadsheetApp.openById(conv.id); } catch (e) { book = null; }
+function readBook_(id, mime) {
+  if (mime === SHEET_MIME) {
+    var book = SpreadsheetApp.openById(id);
+    var names = {};
+    book.getSheets().forEach(function (sh) { names[sh.getName()] = true; });
+    return { names: names, get: function (n) { return book.getSheetByName(n).getDataRange().getDisplayValues(); } };
   }
-  if (!book) {
-    var newId = convertToSheet_(id, '（網站自動轉換，請勿編輯）' + meta.name.replace(/\.xlsx?$/i, ''));
-    if (conv && conv.id) {
-      UrlFetchApp.fetch(driveUrl_('files/' + conv.id, {}), { method: 'patch', contentType: 'application/json', payload: JSON.stringify({ trashed: true }), headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
-    }
-    props.setProperty('STATS_CONVERTED', JSON.stringify({ src: id, modified: meta.modifiedTime, id: newId }));
-    book = SpreadsheetApp.openById(newId);
-  }
-  // 連結指向原檔，大家照常在原檔更新
-  return { book: book, title: meta.name.replace(/\.xlsx?$/i, ''), url: meta.webViewLink };
+  var res = UrlFetchApp.fetch(driveUrl_('files/' + id, { alt: 'media', supportsAllDrives: true }), { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() }, muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) throw new Error('下載檔案失敗 ' + res.getResponseCode());
+  return parseXlsx_(Utilities.unzip(res.getBlob().setContentType('application/zip')));
 }
 
-// 權限宣告：Apps Script 依程式裏用到的功能決定要申請哪些權限。
-// 轉換 Excel 需要「建立雲端硬碟檔案」的權限，所以這裏寫一行 createFile（這個函式永遠不會被執行）
-function scopeHints_() {
-  DriveApp.createFile('never', 'called');
+function xmlDecode_(s) {
+  return s.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, function (m, e) {
+    if (e[0] === '#') return String.fromCharCode(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
+    return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }[e.toLowerCase()];
+  });
 }
+function attr_(tag, name) { var m = tag.match(new RegExp('\\s' + name + '="([^"]*)"')); return m ? xmlDecode_(m[1]) : null; }
 
-// Excel → Google 試算表：依序試三種方法，全部失敗才回報錯誤
-function convertToSheet_(id, name) {
-  var auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
-  var errors = [];
-  var tryFetch = function (label, url, opts) {
-    var res = UrlFetchApp.fetch(url, Object.assign({ muteHttpExceptions: true, headers: auth }, opts));
-    if (res.getResponseCode() === 200) return JSON.parse(res.getContentText()).id;
-    errors.push(label + ' ' + res.getResponseCode() + ' ' + res.getContentText().replace(/\s+/g, ' ').slice(0, 120));
-    return null;
+// files：Utilities.unzip 的結果（或測試用的 [{getName, getDataAsString}]）
+function parseXlsx_(files) {
+  var byName = {};
+  files.forEach(function (f) { byName[f.getName()] = f; });
+  var text = function (n) { return byName[n] ? byName[n].getDataAsString('UTF-8') : ''; };
+  var rels = {};
+  (text('xl/_rels/workbook.xml.rels').match(/<Relationship\b[^>]*>/g) || []).forEach(function (t) {
+    var target = attr_(t, 'Target');
+    rels[attr_(t, 'Id')] = target.charAt(0) === '/' ? target.slice(1) : 'xl/' + target.replace(/^\.\//, '');
+  });
+  var sheetFile = {};
+  (text('xl/workbook.xml').match(/<sheet\b[^>]*>/g) || []).forEach(function (t) { sheetFile[attr_(t, 'name')] = rels[attr_(t, 'r:id')]; });
+  var shared = null;
+  var sharedStrings = function () {
+    if (shared) return shared;
+    shared = (text('xl/sharedStrings.xml').match(/<si>[\s\S]*?<\/si>/g) || []).map(function (si) {
+      return (si.replace(/<rPh\b[\s\S]*?<\/rPh>/g, '').match(/<t\b[^>]*>[\s\S]*?<\/t>|<t\b[^>]*\/>/g) || []).map(function (t) { return xmlDecode_(t.replace(/<[^>]+>/g, '')); }).join('');
+    });
+    return shared;
   };
-  // 1. Drive v3 複製並轉換
-  var newId = tryFetch('v3copy', driveUrl_('files/' + id + '/copy', { fields: 'id', supportsAllDrives: true }),
-    { method: 'post', contentType: 'application/json', payload: JSON.stringify({ name: name, mimeType: SHEET_MIME }) });
-  // 2. Drive v2 複製（convert=true）
-  if (!newId) newId = tryFetch('v2copy', 'https://www.googleapis.com/drive/v2/files/' + id + '/copy?convert=true&supportsAllDrives=true&fields=id',
-    { method: 'post', contentType: 'application/json', payload: JSON.stringify({ title: name }) });
-  // 3. 下載原檔再上傳成 Google 試算表
-  if (!newId) {
-    var dl = UrlFetchApp.fetch(driveUrl_('files/' + id, { alt: 'media', supportsAllDrives: true }), { headers: auth, muteHttpExceptions: true });
-    if (dl.getResponseCode() !== 200) errors.push('download ' + dl.getResponseCode());
-    else {
-      var boundary = 'tcyp' + Date.now();
-      var head = '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: name, mimeType: SHEET_MIME })
-        + '\r\n--' + boundary + '\r\nContent-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n';
-      var body = Utilities.newBlob(head).getBytes().concat(dl.getContent()).concat(Utilities.newBlob('\r\n--' + boundary + '--').getBytes());
-      newId = tryFetch('upload', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        { method: 'post', contentType: 'multipart/related; boundary=' + boundary, payload: body });
-    }
+  var colNum = function (ref) { var l = ref.replace(/\d+/g, ''), n = 0; for (var i = 0; i < l.length; i++) n = n * 26 + l.charCodeAt(i) - 64; return n - 1; };
+  var names = {};
+  Object.keys(sheetFile).forEach(function (n) { names[n] = true; });
+  return {
+    names: names,
+    get: function (n) {
+      var xml = text(sheetFile[n]);
+      var grid = [];
+      (xml.match(/<c\b[^>]*\/>|<c\b[^>]*>[\s\S]*?<\/c>/g) || []).forEach(function (c) {
+        var open = c.match(/^<c\b[^>]*>/)[0];
+        var ref = attr_(open, 'r');
+        if (!ref) return;
+        var t = attr_(open, 't');
+        var v = (c.match(/<v>([\s\S]*?)<\/v>/) || [])[1];
+        var out = '';
+        if (t === 's') out = v != null ? sharedStrings()[+v] || '' : '';
+        else if (t === 'inlineStr') out = xmlDecode_((c.match(/<is>[\s\S]*?<\/is>/) || [''])[0].replace(/<[^>]+>/g, ''));
+        else if (t === 'str') out = v != null ? xmlDecode_(v) : '';
+        else if (t === 'e') out = '';
+        else if (t === 'b') out = v === '1' ? 'TRUE' : 'FALSE';
+        else if (v != null) { var num = Number(v); out = isFinite(num) ? String(Math.round(num * 10) / 10) : v; }
+        var r = +ref.replace(/[A-Z]+/g, '') - 1, k = colNum(ref);
+        while (grid.length <= r) grid.push([]);
+        grid[r][k] = out;
+      });
+      var width = 0;
+      grid.forEach(function (row) { width = Math.max(width, row.length); });
+      return grid.map(function (row) { var o = []; for (var i = 0; i < width; i++) o.push(row[i] == null ? '' : row[i]); return o; });
+    },
+  };
+}
+
+// Excel 的日期是序號（例如 46026），週次標題轉成「月/日」
+function weekLabel_(x) {
+  var s = String(x == null ? '' : x).trim();
+  if (/^\d{5}(\.\d+)?$/.test(s)) {
+    var d = new Date(Date.UTC(1899, 11, 30) + Math.round(+s) * 86400000);
+    return (d.getUTCMonth() + 1) + '/' + d.getUTCDate();
   }
-  if (!newId) throw new Error('Excel 轉換失敗：' + errors.join('｜'));
-  return newId;
+  return s;
 }
 
 // 週報表 → { months, weeks, units: [{ care, name, base, target, months, avg, weeks }], total }
@@ -241,8 +282,8 @@ function parseReport_(v) {
   var h = -1;
   for (var r = 0; r < Math.min(v.length, 10); r++) if (String(v[r][0]).trim() === '照顧區') { h = r; break; }
   if (h < 0) return null;
-  var head = v[h].map(function (x) { return String(x).trim(); });
-  var above = h > 0 ? v[h - 1].map(function (x) { return String(x).trim(); }) : [];
+  var head = v[h].map(weekLabel_);
+  var above = h > 0 ? v[h - 1].map(weekLabel_) : [];
   var nameCol = head.indexOf('青少年小區');
   var baseCol = head.indexOf('基數');
   var targetCol = head.indexOf('目標');
@@ -297,7 +338,7 @@ function testStats() {
   console.log('✅ 讀得到檔案：' + meta.name + '（' + meta.mimeType + '，更新於 ' + meta.modifiedTime + '）');
   var data = chlife_(true);
   data.meetings.forEach(function (m) {
-    if (m.missing) { console.log('⚠️ ' + m.label + '：找不到分頁'); return; }
+    if (m.missing) { console.log('⚠️ ' + m.label + '：找不到「' + m.label + '_週報表」分頁。檔案裏的分頁：' + data.sheetNames.join('、')); return; }
     var last = -1;
     (m.total ? m.total.weeks : []).forEach(function (v, i) { if (v != null) last = i; });
     console.log('✅ ' + m.label + '：' + m.units.length + ' 個小區，最近一週 ' + (m.weeks[last] || '—') + ' 共 ' + (last >= 0 ? m.total.weeks[last] : '—') + ' 人');

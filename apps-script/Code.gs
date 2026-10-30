@@ -196,6 +196,12 @@ function openStats_(id) {
   return { book: book, title: meta.name.replace(/\.xlsx?$/i, ''), url: meta.webViewLink };
 }
 
+// 權限宣告：Apps Script 依程式裏用到的功能決定要申請哪些權限。
+// 轉換 Excel 需要「建立雲端硬碟檔案」的權限，所以這裏寫一行 createFile（這個函式永遠不會被執行）
+function scopeHints_() {
+  DriveApp.createFile('never', 'called');
+}
+
 // Excel → Google 試算表：依序試三種方法，全部失敗才回報錯誤
 function convertToSheet_(id, name) {
   var auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };

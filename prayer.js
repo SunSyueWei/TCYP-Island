@@ -31,13 +31,17 @@ async function post(action, extra = {}) {
 export async function load() {
   state.status = 'loading'; emit();
   try {
-    let j;
-    if (auth.signedIn()) j = await post('listAuth');
-    else {
+    const pub = async () => {
       const res = await fetch(PRAYER_API + '?action=list');
-      j = await res.json();
-      if (!j.ok) throw new Error(j.error || '讀取失敗');
-    }
+      const r = await res.json();
+      if (!r.ok) throw new Error(r.error || '讀取失敗');
+      return r;
+    };
+    let j;
+    if (auth.signedIn()) {
+      // 後端還沒更新（不認得 listAuth）時退回公開名單，至少看得到遮罩後的代禱牆
+      try { j = await post('listAuth'); } catch (err) { if (err.code === 'signin') throw err; j = await pub(); }
+    } else j = await pub();
     state.rows = (j.data || []).filter((r) => r && r.id && r.id !== 'id').sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
     state.viewer = j.viewer || null;
     state.status = 'ready'; state.error = null; state.loadedAt = Date.now();

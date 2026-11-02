@@ -1,6 +1,5 @@
 // 各小島的面板內容
 import { SITE, EVENTS, CAMPUS, COMMUNITY, GLORY } from './data.js';
-import { summaryHtml as prayerSummary } from './prayer.js';
 
 const WD = ['日', '一', '二', '三', '四', '五', '六'];
 
@@ -252,8 +251,6 @@ export const ISLANDS = [
         + sec('青少年福音聚會', `<p>每學期一次、全台中國高中生的福音聚會，歡迎邀請同學和朋友一起來！</p>
           ${past ? '<div class="group-title">活動回顧</div>' : ''}<ul class="list">${eventCard(ev, now.date)}</ul>
           ${past ? '<p class="hint" style="margin-top:10px">下一次福音聚會的日期公布後，會更新在行事曆。</p>' : ''}`)
-        + sec('🙏 代禱牆', `<p>把你邀約的同學朋友加進代禱名單，大家一起為他們禱告，也一起關心他們：答應前來 → 進入小排 → 受浸。</p>
-          ${prayerSummary()}<div class="goto"><button data-open="prayer">🙏 打開代禱牆</button><button data-open="prayer-add">➕ 新增代禱名單</button></div>`)
         + sec('我可以怎麼做？', `<ul class="list">
           <li><span class="num">1</span>為身邊的同學與朋友<b>禱告</b></li>
           <li><span class="num">2</span>尊重朋友的意願，<b>邀請</b>他們參加校園排或福音聚會</li>

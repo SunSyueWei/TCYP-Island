@@ -25,9 +25,10 @@ export function start({ reason, canTry3D }) {
       ${note}
       <p class="t-links">${SITE.links.map((l) => `<a href="${l.url}" target="_blank" rel="noopener">${l.icon} ${l.label}</a>`).join('')}
         ${canTry3D ? '<a href="./">🏝️ 切換到 3D 小島版</a>' : ''}<a href="privacy.html">🔒 隱私說明</a><a href="#" data-open="fishing">🎣 釣魚</a></p>
-      <nav class="t-nav" aria-label="目錄">${ISLANDS.map((i) => `<a href="#t-${i.id}">${i.emoji} ${i.short}</a>`).join('')}</nav>
+      <nav class="t-nav" aria-label="目錄">${ISLANDS.map((i) => `<a href="#t-${i.id}">${i.emoji} ${i.short}</a>`).join('')}<a href="#t-altar">🕯️ 代禱牆</a></nav>
     </div>
-    ${ISLANDS.map((i) => `<article class="t-card" id="t-${i.id}" data-id="${i.id}"></article>`).join('')}`;
+    ${ISLANDS.map((i) => `<article class="t-card" id="t-${i.id}" data-id="${i.id}"></article>`).join('')}
+    <article class="t-card" id="t-altar"></article>`;
   document.body.appendChild(root);
 
   const render = (id) => {
@@ -39,7 +40,14 @@ export function start({ reason, canTry3D }) {
 
   // 代禱牆不需要 3D，文字版一樣可以用（含 Google 登入）
   let prayerUI = null;
-  import('./prayer.js').then((m) => { m.onChange(() => render('harbor')); m.load(); });
+  // 小羊群島的金香壇之島：代禱牆（不需要 3D）；小羊牧場需要 3D 版
+  const renderAltar = (m) => {
+    root.querySelector('#t-altar').innerHTML = `<div class="p-hero" style="--c:#fff1c9"><div class="em">🕯️</div><h2>金香壇之島（小羊群島）</h2><p>在金香壇前，為我們邀約的朋友一同代禱</p></div>
+      <section class="p-sec"><h3>🙏 代禱牆</h3><p>把你邀約的同學朋友加進代禱名單，大家一起為他們禱告：答應前來 → 進入小排 → 受浸。</p>${m.summaryHtml()}
+      <div class="goto"><button data-open="prayer">🙏 打開代禱牆</button><button data-open="prayer-add">➕ 新增代禱名單</button></div></section>
+      <section class="p-sec"><h3>🐑 小羊牧場</h3><p>你登記的朋友會變成小羊，每天為他們禱告，小羊就會長大。小羊牧場需要 3D 版${canTry3D ? '，<a href="./">切換到 3D 小島版</a>' : ''}。</p></section>`;
+  };
+  import('./prayer.js').then((m) => { renderAltar(m); m.onChange(() => renderAltar(m)); m.load(); });
   async function openPrayer(tab) {
     const [store, m] = await Promise.all([import('./store.js'), import('./prayer.js')]);
     if (!prayerUI) {

@@ -7,7 +7,7 @@ const BODY_R = 0.1;
 const TARGET = 200;         // 島上維持大約這麼多島民；真實島民不足時用示範島民補滿
 
 // 從島上已擺好的物件算出「不能走」的圓形區域（島的本地座標）
-function obstaclesOf(isl) {
+export function obstaclesOf(isl) {
   const out = [];
   const box = new THREE.Box3(), size = new THREE.Vector3(), c = new THREE.Vector3();
   isl.updateMatrixWorld(true);
@@ -23,7 +23,7 @@ function obstaclesOf(isl) {
   return out;
 }
 
-function makeWalker(isl) {
+export function makeWalker(isl) {
   const tiles = isl.userData.tiles;
   const obs = isl.userData.obstacles;
   const nearestTile = (x, z) => {

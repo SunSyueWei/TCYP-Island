@@ -1,4 +1,4 @@
-// 代禱牆（福音港灣）：登記邀約的福音朋友、一同代禱、跟進「答應前來 → 進小排 → 受浸」
+// 代禱牆（小羊群島・金香壇之島）：登記邀約的福音朋友、一同代禱、跟進「答應前來 → 進小排 → 受浸」
 // 資料存在青少年代禱網的 Google 試算表（經 Apps Script），網站和公開的程式碼裏沒有任何姓名。
 // 姓名一律由後端決定要不要遮罩：沒登入或別人的登記 → 林○華；自己的登記、服事者 → 完整姓名。
 import { PRAYER_API } from './prayer-config.js';
@@ -17,7 +17,7 @@ const listeners = new Set();
 const emit = () => listeners.forEach((f) => f());
 export const onChange = (f) => listeners.add(f);
 
-async function post(action, extra = {}) {
+export async function post(action, extra = {}) {
   const idToken = await auth.idToken();
   if (!idToken) throw Object.assign(new Error('請先用 Google 帳號登入'), { code: 'signin' });
   // text/plain：避免 CORS 預檢（Apps Script 不處理 OPTIONS）
@@ -100,6 +100,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       if (filter === 'group' && !fs.some((f) => f.g && f.g.n)) return false;
       if (filter === 'bapt' && !fs.some((f) => f.b)) return false;
       if (filter === 'waiting' && !fs.some((f) => !f.c)) return false;
+      if (filter === 'nogroup' && !fs.some((f) => !(f.g && f.g.n))) return false;
       if (k) {
         const hay = [r.name, r.group, r.district, ...fs.map((f) => f.n), r.note, ...(r.tags || [])].join(' ').toLowerCase();
         if (!hay.includes(k)) return false;
@@ -135,7 +136,11 @@ export function createPrayer({ signIn, idToken, signedIn }) {
 
   function entryHtml(r) {
     const oi = open && open.id === r.id ? open.idx : -1;
-    const chips = (r.friends || []).map((f, i) => `<button class="pr-friend${f.c ? ' coming' : ''}${i === oi ? ' open' : ''}" data-act="friend" data-id="${esc(r.id)}" data-idx="${i}" aria-expanded="${i === oi}">${f.c ? '<span class="pr-tick">✓</span>' : ''}${esc(f.n)}${f.g && f.g.n ? `<small>${esc(f.g.n)}</small>` : ''}${f.b ? '<span class="pr-bapt" title="已受浸">浸</span>' : ''}</button>`).join('');
+    // 綠框＝已進小排（福音聚會結束後，重點是帶朋友進小排）；✋＝答應前來；浸＝已受浸
+    const chips = (r.friends || []).map((f, i) => `<button class="pr-friend${f.g && f.g.n ? ' ingroup' : ''}${i === oi ? ' open' : ''}" data-act="friend" data-id="${esc(r.id)}" data-idx="${i}" aria-expanded="${i === oi}">${esc(f.n)}${f.g && f.g.n ? `<small>${esc(f.g.n)}</small>` : ''}${f.c ? '<span class="pr-hand" title="答應前來">✋</span>' : ''}${f.b ? '<span class="pr-bapt" title="已受浸">浸</span>' : ''}</button>`).join('');
+    const claim = auth.signedIn() && r.unowned && !r.mine && !isStaff()
+      ? (r.claimPending ? '<div class="pr-claim pending">⏳ 已送出認領申請，等服事者確認</div>'
+        : `<button class="pr-claim" data-act="claim" data-id="${esc(r.id)}">🙋 這是我登記的</button>`) : '';
     const staffBits = isStaff() ? `<label class="pr-dist">${esc(r.name)} 屬於<select data-act="district" data-name="${esc(r.name)}"><option value="">未歸類</option>${YOUTH_DISTRICTS.flatMap((g) => g.items).map((n) => `<option${n === r.district ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <button class="pr-small" data-act="owner" data-id="${esc(r.id)}">${r.owned ? '👤 改擁有者' : '👤 指定擁有者'}</button>` : '';
     const actions = canEdit(r) ? `<div class="pr-actions">${staffBits}<button class="pr-small" data-act="edit" data-id="${esc(r.id)}">✏️ 編輯</button><button class="pr-small danger" data-act="delete" data-id="${esc(r.id)}">刪除</button></div>` : '';
@@ -145,7 +150,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       ${oi >= 0 ? friendPanel(r, r.friends[oi], oi) : ''}
       ${(r.tags || []).length ? `<div class="pr-tags">${r.tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
       ${r.note ? `<p class="pr-note">${esc(r.note)}</p>` : ''}
-      ${actions}
+      ${claim}${actions}
     </article>`;
   }
 
@@ -160,12 +165,16 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       return `<h3 class="pr-sec">${title}<small>${Object.keys(groups).length} 個${type === 'youth' ? '小區' : '校園'}・${list.length} 位登記</small></h3>`
         + Object.keys(groups).sort((a, b) => a.localeCompare(b, 'zh-Hant')).map((g) => `<section class="pr-group"><h4>${esc(g)}<small>${groups[g].length} 位登記・${groups[g].reduce((a, r) => a + (r.friends || []).length, 0)} 位朋友</small></h4>${groups[g].map(entryHtml).join('')}</section>`).join('');
     }).join('');
-    return `<div class="pr-tiles">${[['登記', s.entries], ['福音朋友', s.friends], ['答應前來', s.coming], ['進小排', s.inGroup], ['受浸', s.bapt]].map(([l, n]) => `<div><small>${l}</small><b>${n}</b></div>`).join('')}</div>
+    const mineCount = state.rows.filter((r) => r.mine).length;
+    const claimHint = auth.signedIn() && !isStaff() && !mineCount && state.rows.some((r) => r.unowned)
+      ? '<div class="pr-claimhint">🙋 <b>以前在舊網站登記過嗎？</b>找到你登記的那一筆（看小區和名字頭尾兩個字），按「🙋 這是我登記的」。服事者確認後，你就看得到朋友的完整姓名，他們也會出現在你的小羊牧場。</div>' : '';
+    return `${claimHint}<div class="pr-tiles">${[['登記', s.entries], ['福音朋友', s.friends], ['進小排', s.inGroup, 'hl'], ['答應前來', s.coming], ['受浸', s.bapt]].map(([l, n, c]) => `<div${c ? ` class="${c}"` : ''}><small>${l}</small><b>${n}</b></div>`).join('')}</div>
       <div class="pr-filters">
         <input type="search" data-act="q" placeholder="搜尋名字、小區、學校" value="${esc(q)}" aria-label="搜尋">
-        <select data-act="filter" aria-label="篩選">${[['all', '全部'], ['waiting', '還沒答應'], ['coming', '已答應前來'], ['group', '已進小排'], ['bapt', '已受浸']].map(([v, l]) => `<option value="${v}"${v === filter ? ' selected' : ''}>${l}</option>`).join('')}</select>
+        <select data-act="filter" aria-label="篩選">${[['all', '全部'], ['nogroup', '還沒進小排'], ['group', '已進小排'], ['waiting', '還沒答應'], ['coming', '已答應前來'], ['bapt', '已受浸']].map(([v, l]) => `<option value="${v}"${v === filter ? ' selected' : ''}>${l}</option>`).join('')}</select>
         ${auth.signedIn() ? `<label class="pr-chk"><input type="checkbox" data-act="mine"${onlyMine ? ' checked' : ''}> 只看我的</label>` : ''}
       </div>
+      <p class="pr-legend"><span class="pr-legend-chip">綠框</span>＝已進小排　✋＝答應前來　<span class="pr-bapt">浸</span>＝已受浸</p>
       <p class="hint">點福音朋友的名字可以更新狀況。${auth.signedIn() ? '自己登記的朋友會顯示完整姓名，別人的只顯示頭尾兩個字。' : '名字中間的字會遮起來；登入後，自己登記的朋友會顯示完整姓名。'}</p>
       ${sections || `<p class="hint">${rows.length || !state.rows.length ? '還沒有人登記。' : '找不到符合的登記。'}</p>`}`;
   }
@@ -234,10 +243,36 @@ export function createPrayer({ signIn, idToken, signedIn }) {
   }
 
   // 服事者：完整姓名總覽（畫面印上目前帳號，截圖外流時查得到來源）
+  const staffData = { claims: null, stats: null, error: null };
+  async function loadStaffData() {
+    try {
+      const [c, st] = await Promise.all([post('listClaims'), post('prayStats')]);
+      staffData.claims = c.data || []; staffData.stats = st.data || null; staffData.error = null;
+    } catch (err) { staffData.error = err.message; }
+    if (!el.hidden) render();
+  }
+  function claimsHtml() {
+    if (staffData.error) return `<p class="cr-warn">讀不到認領申請（${esc(staffData.error)}）</p>`;
+    if (!staffData.claims) return '<p class="hint">正在讀取認領申請…</p>';
+    if (!staffData.claims.length) return '<p class="hint">目前沒有待確認的認領。</p>';
+    return staffData.claims.map((c) => `<div class="pr-claimrow">
+      <div><b>${esc(c.name)}</b>（${esc(c.group)}）<small>福音朋友：${c.friends.map(esc).join('、')}</small><small>申請人：${esc(c.email)}・${esc(String(c.time).slice(5, 10).replace('-', '/'))}</small></div>
+      <div class="pr-claimacts"><button class="pr-ok" data-act="approve" data-claim="${esc(c.claimId)}">✅ 核准</button><button class="pr-small" data-act="reject" data-claim="${esc(c.claimId)}">拒絕</button></div></div>`).join('');
+  }
+  function lambStatsHtml() {
+    const st = staffData.stats;
+    if (!st) return '';
+    const max = Math.max(1, ...st.days.map((d) => d.prayers));
+    return `<h3 class="pr-sec">🐑 小羊群島（近 7 天）<small>不具名統計</small></h3>
+      <div class="pr-tiles three"><div><small>禱告的人</small><b>${st.week.users}</b></div><div><small>被記念的小羊</small><b>${st.week.lambs}</b></div><div><small>禱告次數</small><b>${st.week.prayers}</b></div></div>
+      <div class="pr-days">${st.days.map((d) => `<div title="${esc(d.date)}：${d.users} 人為 ${d.lambs} 隻小羊禱告 ${d.prayers} 次"><i style="height:${(d.prayers / max) * 100}%"></i><b>${d.prayers}</b><small>${esc(d.date.slice(5).replace('-', '/'))}</small></div>`).join('')}</div>`;
+  }
   function staffHtml() {
     const noOwner = state.rows.filter((r) => !r.owned).length;
     const when = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
-    return `<div class="pr-staffnote"><b>🔐 服事者</b>：你看得到全部的完整姓名，也可以在代禱牆分頁編輯、刪除、改小區歸屬、指定擁有者。
+    return `<h3 class="pr-sec">🙋 待確認的認領<small>${staffData.claims ? staffData.claims.length + ' 筆' : ''}</small></h3>${claimsHtml()}
+      ${lambStatsHtml()}
+      <div class="pr-staffnote"><b>🔐 服事者</b>：你看得到全部的完整姓名，也可以在代禱牆分頁編輯、刪除、改小區歸屬、指定擁有者。
       ${noOwner ? `<br>有 <b>${noOwner}</b> 筆是舊網站登記的、還沒有擁有者；到代禱牆按「👤 指定擁有者」填入登記者的 Gmail，他登入後就看得到自己登記的朋友。` : ''}</div>
       <div class="pr-report" data-mark="${esc(state.viewer.email)}・${esc(when)}">
         <table><thead><tr><th>小區／學校</th><th>登記者</th><th>福音朋友</th></tr></thead><tbody>
@@ -250,7 +285,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
 
   function render() {
     const tabs = [['wall', '🙏 代禱牆'], ['add', editing ? '✏️ 編輯' : '➕ 新增名單'], ['progress', '📈 跟進進度']];
-    if (isStaff()) tabs.push(['staff', '🔐 服事者']);
+    if (isStaff()) tabs.push(['staff', '🔐 服事者' + (staffData.claims && staffData.claims.length ? `（${staffData.claims.length}）` : '')]);
     if (tab === 'staff' && !isStaff()) tab = 'wall';
     const body = state.status === 'error' && !state.rows.length ? `<p class="cr-warn">讀取失敗（${esc(state.error)}）。請稍後按重新整理。</p>`
       : state.status !== 'ready' && !state.rows.length ? '<p class="hint">正在讀取代禱牆…</p>'
@@ -273,7 +308,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
   el.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-act],[data-tab]');
     if (!t) return;
-    if (t.dataset.tab) { tab = t.dataset.tab; msg = ''; render(); return; }
+    if (t.dataset.tab) { tab = t.dataset.tab; msg = ''; render(); if (tab === 'staff') loadStaffData(); return; }
     const a = t.dataset.act;
     if (a === 'close') return close();
     if (a === 'refresh') { msg = ''; await load(); return; }
@@ -292,6 +327,10 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       const r = findRow(t.dataset.id);
       if (!confirm(`確定要刪除「${r.name}」的這筆登記嗎？（服事者可以從試算表還原）`)) return;
       return act(() => post('deleteAuth', { id: r.id }), '已刪除。');
+    }
+    if (a === 'claim') return act(() => post('claimRequest', { id: t.dataset.id }), '已送出認領申請，服事者確認後就會變成你的登記。');
+    if (a === 'approve' || a === 'reject') {
+      return act(async () => { await post('resolveClaim', { claimId: t.dataset.claim, approve: a === 'approve' }); await loadStaffData(); }, a === 'approve' ? '已核准。' : '已拒絕。');
     }
     if (a === 'owner') {
       const email = prompt('把這筆登記指定給哪個 Gmail？（留空＝清除擁有者）\n指定後，那個人登入就看得到自己登記的朋友的完整姓名。', '');
@@ -370,6 +409,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     render();
     el.querySelector('.pr-close')?.focus();
     if (state.status !== 'ready' || Date.now() - state.loadedAt > 60000) await load();
+    if (isStaff() && !staffData.claims) loadStaffData();   // 服事者分頁標籤上顯示待確認的數量
   }
   function close() {
     el.hidden = true;
@@ -380,6 +420,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
   function userChanged() {
     editing = null; formDraft = {}; onlyMine = false; open = null;
     state.viewer = null;
+    Object.assign(staffData, { claims: null, stats: null, error: null });
     if (state.status !== 'idle') load();
   }
   return { open: openBoard, close, userChanged, isOpen: () => !el.hidden };

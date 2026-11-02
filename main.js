@@ -9,6 +9,7 @@ import * as staff from './staff.js';
 import { createPeople } from './people.js';
 import { createTsunami } from './tsunami.js';
 import { createChlife } from './chlife.js';
+import { createPrayer, load as loadPrayer, state as prayerState, onChange as onPrayerChange } from './prayer.js';
 
 // ================= 基本設定 =================
 const canvas = document.getElementById('scene');
@@ -875,6 +876,7 @@ let authGen = 0;
 store.onUser(async (u) => {
   const gen = ++authGen;
   refreshStaffAccess(u);
+  prayer.userChanged();
   myPid = null;
   isAdminNow = false;
   closeWhoCard();
@@ -1107,6 +1109,7 @@ function openIsland(id) {
   const isl = islandObjs.find((i) => i.userData.id === id);
   if (!isl) return;
   people.close();
+  if (id === 'harbor' && prayerState.status === 'idle') loadPrayer();
   stopAuto();
   selected = isl;
   renderPanel();
@@ -1195,6 +1198,8 @@ addEventListener('keydown', (e) => {
 panelBody.addEventListener('click', (e) => {
   if (e.target.closest('[data-open="fishing"]')) return openFishing();
   if (e.target.closest('[data-open="chlife"]')) return chlife.open();
+  if (e.target.closest('[data-open="prayer"]')) return prayer.open('wall');
+  if (e.target.closest('[data-open="prayer-add"]')) return prayer.open('add');
   if (e.target.closest('[data-staff="refresh"]')) { staff.loadDashboard(true).then(renderPanel); renderPanel(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) {
@@ -1272,7 +1277,7 @@ addEventListener('resize', resize);
 resize();
 
 // 釣魚或捏島民的視窗打開時，暫停後面的 3D 畫面（省電，也讓 QTE 在低階手機上反應即時）
-const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden]), .chlife:not([hidden])');
+const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden]), .chlife:not([hidden]), .prayer:not([hidden])');
 function frame() {
   if (overlays()) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1355,6 +1360,10 @@ if (location.hash && ISLANDS.some((i) => i.id === location.hash.slice(1))) {
   intro.classList.add('gone');
   setTimeout(() => openIsland(location.hash.slice(1)), 300);
 }
+// 代禱牆（福音港灣）：登入的人看得到自己登記的朋友的完整姓名，服事者有管理權限
+const prayer = createPrayer({ signIn: store.signIn, idToken: store.idToken, signedIn: () => !!store.myUid() });
+onPrayerChange(() => { if (selected?.userData.id === 'harbor') { const st = panelBody.scrollTop; renderPanel(); panelBody.scrollTop = st; } });
+
 // 召會生活人數統計看板（服事者群島）
 const chlife = createChlife({ load: (force) => staff.loadChlife(force), getState: () => staff.chlifeState });
 

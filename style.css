@@ -787,3 +787,108 @@ body:has(.intro:not(.gone)) .people-tab { opacity: 0; pointer-events: none; }
   .cl-rrow .cl-st { grid-column: 2 / -1; justify-self: start; margin-top: -2px; }
   .cl-tile b { font-size: 24px; }
 }
+
+/* ---------- 代禱牆（福音港灣） ---------- */
+.pr-funnel { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 10px; }
+.pr-frow { display: grid; grid-template-columns: 128px 1fr 40px; align-items: center; gap: 8px; font-size: 13px; }
+.pr-flabel { font-weight: 700; white-space: nowrap; }
+.pr-ftrack { height: 10px; background: #e8f4f3; border-radius: 4px; overflow: hidden; }
+.pr-ftrack i { display: block; height: 100%; background: #2a78d6; border-radius: 0 4px 4px 0; }
+.pr-frow b { text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
+.prayer {
+  position: fixed; inset: 0; z-index: 40; background: rgba(30, 60, 70, .5);
+  display: flex; flex-direction: column; align-items: center; padding: 16px;
+}
+.prayer[hidden] { display: none; }
+.pr-head, .pr-tabs, .pr-body { width: 100%; max-width: 860px; background: var(--paper); border: 2px solid var(--line); }
+.pr-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 0; border-radius: 22px 22px 0 0; padding: 12px 14px 8px 20px; }
+.pr-head b { display: block; font-size: 18px; font-weight: 900; }
+.pr-head small { font-size: 12px; color: var(--ink-soft); }
+.pr-head-acts { display: flex; gap: 6px; }
+.pr-head-acts button { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; min-width: 36px; height: 36px; }
+.pr-tabs { display: flex; gap: 4px; border-top: 0; border-bottom: 0; padding: 0 14px 8px; overflow-x: auto; }
+.pr-tabs button { flex: none; border: 0; background: #f5eedf; border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 700; }
+.pr-tabs button[aria-selected="true"] { background: #2a78d6; color: #fff; }
+.pr-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); border-radius: 0 0 22px 22px; padding: 14px 20px 30px; }
+.pr-msg { background: #eef5fd; border-radius: 12px; padding: 8px 12px; font-size: 14px; font-weight: 700; margin: 0 0 10px; }
+.pr-tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
+.pr-tiles div { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; text-align: center; }
+.pr-tiles small { display: block; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+.pr-tiles b { font-size: 24px; font-weight: 900; }
+.pr-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
+.pr-filters input[type="search"] { flex: 1; min-width: 160px; }
+.pr-filters input[type="search"], .pr-filters select, .pr-form input:not([type]), .pr-form input[type="text"], .pr-form select, .pr-fpanel select {
+  font: inherit; font-size: 14px; border: 2px solid var(--line); border-radius: 12px; padding: 7px 10px; background: #fff; color: var(--ink); min-width: 0;
+}
+.pr-chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.pr-sec { font-size: 16px; font-weight: 900; margin: 18px 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pr-sec small, .pr-group h4 small { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+.pr-group { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px; margin-bottom: 10px; }
+.pr-group h4 { margin: 0 0 6px; font-size: 15px; font-weight: 900; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pr-entry { border-top: 1px dashed var(--line); padding: 8px 0 6px; }
+.pr-entry:first-of-type { border-top: 0; }
+.pr-entry.mine { background: #fffaf0; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 10px; }
+.pr-entry-head { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.pr-entry-head time { margin-left: auto; font-size: 12px; color: var(--ink-soft); }
+.pr-mine { background: var(--sun); color: #fff; font-size: 11px; font-weight: 900; border-radius: 999px; padding: 1px 8px; }
+.pr-noowner { background: #f3ecdd; color: var(--ink-soft); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
+.pr-friends { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pr-friend { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 11px; font-size: 14px; font-weight: 700; }
+.pr-friend small { font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+.pr-friend.coming { border-color: #7fc9a0; background: #eefaf2; }
+.pr-friend.open { border-color: #2a78d6; box-shadow: 0 0 0 2px rgba(42, 120, 214, .2); }
+.pr-tick { color: #0a7d3b; font-weight: 900; }
+.pr-bapt { background: #2a78d6; color: #fff; border-radius: 999px; font-size: 11px; padding: 0 6px; }
+.pr-fpanel { margin: 8px 0 4px; background: #f6fafe; border: 2px solid #cfe0f5; border-radius: 14px; padding: 8px 12px; display: flex; flex-direction: column; gap: 8px; }
+.pr-fpanel-head { display: flex; justify-content: space-between; align-items: center; }
+.pr-frow2 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+.pr-frow2 > span { width: 64px; font-weight: 700; color: var(--ink-soft); font-size: 13px; }
+.pr-tog { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 13px; }
+.pr-tog.on { background: #0a7d3b; border-color: #0a7d3b; color: #fff; }
+.pr-tog:disabled, .pr-fpanel select:disabled { opacity: .5; }
+.pr-lock { margin: 0; font-size: 13px; background: #fff6e2; border-radius: 10px; padding: 6px 10px; }
+.pr-lock button { margin-left: 6px; border: 0; background: var(--sun); color: #fff; font-weight: 800; border-radius: 999px; padding: 3px 10px; }
+.pr-x { border: 0; background: transparent; font-size: 15px; width: 30px; height: 30px; border-radius: 50%; }
+.pr-x:hover { background: #eee; }
+.pr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.pr-tags span { font-size: 12px; background: #f3ecdd; border-radius: 999px; padding: 1px 9px; }
+.pr-note { margin: 6px 0 0; font-size: 13px; color: var(--ink-soft); }
+.pr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.pr-small { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 700; }
+.pr-small.danger { color: #b3261e; }
+.pr-dist { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+.pr-dist select { font: inherit; font-size: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 2px 4px; }
+.pr-signin { text-align: center; padding: 30px 10px; font-size: 15px; line-height: 1.8; }
+.pr-form { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.pr-form h3 { margin: 0; font-size: 18px; font-weight: 900; }
+.pr-form > label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 700; }
+.pr-form fieldset { border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px 10px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.pr-form legend { font-size: 14px; font-weight: 800; padding: 0 4px; }
+.pr-radio { font-size: 14px; display: flex; gap: 6px; align-items: center; }
+.pr-frows { display: flex; flex-direction: column; gap: 6px; }
+.pr-frow3 { display: grid; grid-template-columns: 20px 1fr auto auto; gap: 6px; align-items: center; }
+.pr-frow3 > span { font-size: 12px; color: var(--ink-soft); text-align: center; }
+.pr-tagpick { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 14px; }
+.pr-form-acts { display: flex; gap: 8px; align-items: center; }
+.pr-plist { display: flex; flex-wrap: wrap; gap: 6px; }
+.pr-plist span { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 4px 10px; font-size: 14px; font-weight: 700; }
+.pr-plist small { display: block; font-size: 11px; color: var(--ink-soft); font-weight: 600; }
+.pr-staffnote { background: #f1edfb; border-radius: 14px; padding: 10px 14px; font-size: 14px; line-height: 1.8; margin-bottom: 12px; }
+.pr-report { position: relative; overflow-x: auto; }
+.pr-report::after { /* 浮水印：截圖外流時查得到是誰的畫面 */
+  content: attr(data-mark); position: absolute; inset: 0; pointer-events: none; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: rgba(59, 47, 37, .08); transform: rotate(-18deg); white-space: nowrap;
+}
+.pr-report table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pr-report th, .pr-report td { border: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+.pr-report th { background: #f7f1e4; }
+.pr-markline { font-size: 12px; color: var(--ink-soft); margin: 6px 0 0; }
+@media (max-width: 720px) {
+  .prayer { padding: 0; }
+  .pr-head { border-radius: 0; border-left: 0; border-right: 0; padding-top: max(10px, env(safe-area-inset-top)); }
+  .pr-tabs { border-left: 0; border-right: 0; }
+  .pr-body { border-radius: 0; border-left: 0; border-right: 0; padding: 12px 12px 40px; }
+  .pr-tiles { grid-template-columns: repeat(3, 1fr); }
+  .pr-tiles b { font-size: 20px; }
+  .pr-frow { grid-template-columns: 112px 1fr 34px; }
+}

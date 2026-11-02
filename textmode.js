@@ -37,7 +37,21 @@ export function start({ reason, canTry3D }) {
   };
   ISLANDS.forEach((i) => render(i.id));
 
+  // 代禱牆不需要 3D，文字版一樣可以用（含 Google 登入）
+  let prayerUI = null;
+  import('./prayer.js').then((m) => { m.onChange(() => render('harbor')); m.load(); });
+  async function openPrayer(tab) {
+    const [store, m] = await Promise.all([import('./store.js'), import('./prayer.js')]);
+    if (!prayerUI) {
+      prayerUI = m.createPrayer({ signIn: store.signIn, idToken: store.idToken, signedIn: () => !!store.myUid() });
+      store.onUser(() => prayerUI.userChanged());
+    }
+    prayerUI.open(tab);
+  }
+
   root.addEventListener('click', (e) => {
+    const pr = e.target.closest('[data-open="prayer"], [data-open="prayer-add"]');
+    if (pr) { e.preventDefault(); openPrayer(pr.dataset.open === 'prayer-add' ? 'add' : 'wall'); return; }
     if (e.target.closest('[data-open="fishing"]')) {
       e.preventDefault();
       import('./fishing.js').then((m) => { fishingUI ||= m.createFishing(); fishingUI.open(); });

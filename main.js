@@ -11,6 +11,7 @@ import { createTsunami } from './tsunami.js';
 import { createChlife } from './chlife.js';
 import { createPrayer, load as loadPrayer, state as prayerState, onChange as onPrayerChange } from './prayer.js';
 import { createTour } from './tour.js';
+import { createPractice } from './practice.js';
 import { lambIslands, lambState, loadLambs, resetLambs, onLambs, createLambWorld, createLambCard, prayFor } from './lambs.js';
 
 // ================= 基本設定 =================
@@ -942,6 +943,7 @@ store.onUser(async (u) => {
   const gen = ++authGen;
   refreshStaffAccess(u);
   prayer.userChanged();
+  practice.userChanged();
   lambCard.close();
   resetLambs();
   if (u && arch === 'lamb') loadLambs();
@@ -1431,7 +1433,7 @@ addEventListener('resize', resize);
 resize();
 
 // 釣魚或捏島民的視窗打開時，暫停後面的 3D 畫面（省電，也讓 QTE 在低階手機上反應即時）
-const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden]), .chlife:not([hidden]), .prayer:not([hidden])');
+const overlays = () => document.querySelector('.fishing:not([hidden]), .creator:not([hidden]), .chlife:not([hidden]), .prayer:not([hidden]), .practice:not([hidden])');
 function frame() {
   if (overlays()) { clock.getDelta(); requestAnimationFrame(frame); return; }
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1517,6 +1519,10 @@ if (location.hash && ISLANDS.some((i) => i.id === location.hash.slice(1))) {
 }
 // 代禱牆（福音港灣）：登入的人看得到自己登記的朋友的完整姓名，服事者有管理權限
 const prayer = createPrayer({ signIn: store.signIn, idToken: store.idToken, signedIn: () => !!store.myUid() });
+
+// 操練本藏寶圖：每週交操練本拼一塊
+const practice = createPractice({ signIn: store.signIn, signedIn: () => !!store.myUid() });
+document.getElementById('mapBtn').addEventListener('click', () => { setMenu(false); setArchMenu(false); practice.open(); });
 
 // 召會生活人數統計看板（服事者群島）
 const chlife = createChlife({ load: (force) => staff.loadChlife(force), getState: () => staff.chlifeState });

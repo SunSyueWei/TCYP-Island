@@ -1011,5 +1011,92 @@ body.lamb-mode .menu-fish, body.lamb-mode .people-tab { display: none; }
 @media (max-width: 480px) {
   .menu-bar { gap: 6px; }
   .menu-bar button { padding: 9px 11px; font-size: 13px; gap: 5px; }
-  .menu-bar .mb-l { display: none; }   /* 窄螢幕：釣魚、群島只留圖示 */
+  .menu-bar .mb-l { display: none; }   /* 窄螢幕：釣魚、藏寶圖、群島只留圖示 */
+}
+.mb-x { font-style: normal; }
+@media (max-width: 420px) {
+  .menu-bar { gap: 5px; }
+  .menu-bar button { padding: 9px 9px; }
+  .menu-bar .mb-x { display: none; }   /* 「小島目錄」縮成「目錄」 */
+}
+
+/* ================= 操練本藏寶圖 ================= */
+.menu-bar .menu-map { background: #f6e3b4; border-color: #e2c47c; }
+.menu-bar .menu-map:hover { background: #f0d692; }
+.practice { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(70, 50, 20, .35); backdrop-filter: blur(3px); }
+.practice[hidden] { display: none; }
+.pm-card { position: relative; width: min(640px, 100%); max-height: calc(100vh - 32px); overflow: hidden; display: flex; flex-direction: column; background: var(--paper); border: 2px solid var(--line); border-radius: 28px; box-shadow: 0 24px 60px rgba(70, 50, 20, .35); }
+.pm-close { position: absolute; top: 12px; right: 12px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); background: #fff; }
+.pm-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 60px 8px 20px; }
+.pm-head h2 { margin: 0; font-size: 21px; font-weight: 900; }
+.pm-tabs { display: flex; gap: 6px; }
+.pm-tabs button { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 13px; }
+.pm-tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+.pm-body { overflow-y: auto; padding: 4px 20px 20px; }
+
+.pm-map { display: block; width: 100%; height: auto; margin: 4px 0 8px; }
+.pm-paper { fill: #f3e2bd; stroke: #d9bd84; stroke-width: 3; stroke-dasharray: 10 6; }
+.pm-fog path { fill: #ead3a3; stroke: #c9a564; stroke-width: 1.6; stroke-dasharray: 4 3; }
+.pm-fog text { font: 900 26px 'Fredoka', 'Noto Sans TC', sans-serif; fill: #b98a3e; text-anchor: middle; }
+.pm-fog.next path { fill: #fff5d8; stroke: #e9a630; stroke-width: 2.6; stroke-dasharray: none; animation: pmPulse 1.6s ease-in-out infinite; }
+@keyframes pmPulse { 50% { fill: #ffe9a8; } }
+.pm-edge { fill: none; stroke: rgba(255, 255, 255, .85); stroke-width: 1.4; }
+.pm-piece.gold .pm-edge { stroke: #e9a630; stroke-width: 3.2; filter: drop-shadow(0 0 3px rgba(242, 181, 68, .9)); }
+.pm-star { font-size: 16px; fill: #e9a630; text-anchor: middle; }
+.pm-map.done .pm-edge { stroke: rgba(255, 255, 255, .35); }
+.pm-map.done .pm-piece.gold .pm-edge { stroke: #e9a630; }
+
+.pm-stat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.pm-stat b { font-size: 18px; }
+.pm-keys { margin-left: auto; font-size: 20px; letter-spacing: 2px; }
+.pm-key { filter: grayscale(1); opacity: .28; }
+.pm-key.got { filter: none; opacity: 1; }
+.pm-gold-t { color: #c98a10; }
+
+.pm-wk, .pm-done, .pm-intro { background: #fff; border: 2px solid var(--line); border-radius: 18px; padding: 14px 16px; }
+.pm-wk > b, .pm-done > b { font-size: 16px; }
+.pm-wk p, .pm-done p, .pm-intro p { margin: 6px 0; font-size: 14px; line-height: 1.6; }
+.pm-wk.ok { border-color: #bfe0a6; background: #f4fbee; }
+.pm-done { border-color: #f2b544; background: #fff8e3; text-align: center; }
+.pm-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 12px; }
+.pm-slot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 140px; padding: 10px; border: 2px dashed #d9bd84; border-radius: 16px; background: #fffaf0; cursor: pointer; text-align: center; overflow: hidden; }
+.pm-slot.has { border-style: solid; border-color: #7fb85a; }
+.pm-slot input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.pm-slot img { width: 100%; height: 96px; object-fit: cover; border-radius: 10px; }
+.pm-cam { font-size: 34px; }
+.pm-slot b { font-size: 14px; }
+.pm-slot small, .pm-note { font-size: 12px; color: var(--ink-soft); }
+.pm-go { display: block; width: 100%; border: 0; border-radius: 999px; padding: 12px 16px; background: var(--sun); color: #fff; font-weight: 900; font-size: 16px; box-shadow: 0 4px 0 #d4962a; }
+.pm-go:disabled { background: #e6dccb; color: #a99a85; box-shadow: none; cursor: not-allowed; }
+.pm-msg { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: #fff5d8; font-weight: 700; font-size: 14px; }
+.pm-err { color: #c0392b; font-weight: 700; }
+.pm-wait { color: var(--ink-soft); text-align: center; padding: 18px 0; }
+
+.pm-queue { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.pm-queue li { background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 12px 14px; }
+.pm-queue li.gold { border-color: #f2d48a; background: #fffbef; }
+.pm-q-head b { display: block; font-size: 15px; }
+.pm-q-head small { color: var(--ink-soft); font-size: 12px; word-break: break-all; }
+.pm-q-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.pm-q-photos img { width: 100%; max-height: 220px; object-fit: contain; background: #f5efe2; border-radius: 10px; cursor: zoom-in; }
+.pm-q-photos.big { grid-template-columns: 1fr; }
+.pm-q-photos.big img { max-height: none; cursor: zoom-out; }
+.pm-q-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.pm-q-acts button { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px; }
+.pm-q-acts .pm-sign { background: #e9a630; border-color: #e9a630; color: #fff; }
+.pm-q-acts .pm-revoke { margin-left: auto; color: #c0392b; border-color: #f0c9c2; }
+.pm-signed { font-weight: 700; color: #c98a10; font-size: 13px; }
+
+.pm-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pm-fx i { position: absolute; left: var(--x); top: -30px; font-style: normal; font-size: 24px; animation: pmFall 2.2s ease-in var(--d) forwards; }
+@keyframes pmFall { to { transform: translateY(110vh) rotate(260deg); opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .pm-fog.next path, .pm-fx i { animation: none; } }
+@media (max-width: 720px) {
+  .practice { padding: 0; align-items: end; }
+  .pm-card { width: 100%; max-height: 92vh; border-radius: 24px 24px 0 0; }
+  .pm-head { padding: 16px 56px 6px 16px; }
+  .pm-head h2 { font-size: 18px; }
+  .pm-body { padding: 4px 14px 18px; }
+  .pm-slot { min-height: 120px; }
+  .pm-keys { margin-left: 0; }
 }

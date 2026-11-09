@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300" width="600" height="300">
+  <!-- 操練本藏寶圖拼完後的復興大樓（參考實景照片，畫成小島的玩具模型風格） -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe3ef"/><stop offset="1" stop-color="#fbe8c8"/>
+    </linearGradient>
+    <linearGradient id="wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1cfc3"/><stop offset="1" stop-color="#e4b8aa"/>
+    </linearGradient>
+    <pattern id="win" x="244" y="96" width="22" height="20" patternUnits="userSpaceOnUse">
+      <rect x="2" y="2" width="15" height="10" rx="1.5" fill="#7fa3bf"/>
+      <rect x="2" y="2" width="15" height="4" rx="1.5" fill="#a9c6da"/>
+      <rect x="1" y="12" width="17" height="2" fill="#fff6ee"/>
+      <rect x="15" y="5" width="5" height="4" rx="1" fill="#fbfbf6"/>
+    </pattern>
+  </defs>
+
+  <!-- 天空、太陽、雲 -->
+  <rect width="600" height="300" fill="url(#sky)"/>
+  <circle cx="522" cy="56" r="26" fill="#f2b544"/>
+  <circle cx="522" cy="56" r="34" fill="#f2b544" opacity=".25"/>
+  <g fill="#fff" opacity=".9">
+    <ellipse cx="96" cy="58" rx="34" ry="13"/><ellipse cx="120" cy="50" rx="22" ry="14"/><ellipse cx="74" cy="52" rx="16" ry="10"/>
+    <ellipse cx="438" cy="96" rx="28" ry="10"/><ellipse cx="456" cy="90" rx="18" ry="11"/>
+  </g>
+
+  <!-- 遠方的城市 -->
+  <g fill="#c9d9e3">
+    <rect x="40" y="150" width="34" height="70"/><rect x="80" y="128" width="26" height="92"/><rect x="112" y="160" width="40" height="60"/>
+    <rect x="430" y="140" width="30" height="80"/><rect x="466" y="118" width="24" height="102"/><rect x="496" y="156" width="46" height="64"/>
+  </g>
+
+  <!-- 小島：土層與草地 -->
+  <polygon points="30,252 82,268 518,268 570,252 570,272 518,292 82,292 30,272" fill="#a26f48"/>
+  <polygon points="30,252 82,268 518,268 570,252 570,262 518,280 82,280 30,262" fill="#c4895a"/>
+  <polygon points="30,252 90,216 510,216 570,252 518,268 82,268" fill="#a3d06f"/>
+  <polygon points="200,240 400,240 420,252 180,252" fill="#d9cfc0"/>
+
+  <!-- 大樓右側面 -->
+  <polygon points="390,72 418,84 418,246 390,240" fill="#d3a596"/>
+  <g fill="#b98f84"><rect x="396" y="100" width="16" height="3"/><rect x="396" y="130" width="16" height="3"/><rect x="396" y="160" width="16" height="3"/><rect x="396" y="190" width="16" height="3"/></g>
+  <!-- 大樓正面 -->
+  <rect x="210" y="72" width="180" height="168" fill="url(#wall)"/>
+  <rect x="210" y="72" width="24" height="168" fill="#e7bcae"/>
+  <rect x="366" y="72" width="24" height="168" fill="#e7bcae"/>
+  <rect x="245" y="96" width="110" height="100" fill="url(#win)"/>
+  <g fill="#7fa3bf"><rect x="216" y="100" width="12" height="9" rx="1.5"/><rect x="216" y="140" width="12" height="9" rx="1.5"/><rect x="216" y="180" width="12" height="9" rx="1.5"/><rect x="372" y="100" width="12" height="9" rx="1.5"/><rect x="372" y="140" width="12" height="9" rx="1.5"/><rect x="372" y="180" width="12" height="9" rx="1.5"/></g>
+  <!-- 屋頂 -->
+  <polygon points="206,68 392,68 420,80 234,80" fill="#c99a8e"/>
+  <rect x="206" y="68" width="186" height="6" fill="#d8aa9d"/>
+  <!-- 屋頂招牌「神愛世人」 -->
+  <g>
+    <rect x="236" y="28" width="128" height="10" fill="#e8e6df"/>
+    <g stroke="#cfccc2" stroke-width="1.5"><line x1="246" y1="28" x2="246" y2="38"/><line x1="266" y1="28" x2="266" y2="38"/><line x1="286" y1="28" x2="286" y2="38"/><line x1="306" y1="28" x2="306" y2="38"/><line x1="326" y1="28" x2="326" y2="38"/><line x1="346" y1="28" x2="346" y2="38"/></g>
+    <rect x="232" y="38" width="136" height="30" rx="2" fill="#fbf8f1" stroke="#e2ddd0" stroke-width="2"/>
+    <text x="300" y="61" text-anchor="middle" font-family="'Noto Sans TC','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif" font-size="21" font-weight="900" letter-spacing="7" fill="#b8323a">神愛世人</text>
+  </g>
+  <!-- 綠色遮雨棚 -->
+  <rect x="234" y="200" width="132" height="6" fill="#3f8a5b"/>
+  <path d="M234 206 q11 12 22 0 q11 12 22 0 q11 12 22 0 q11 12 22 0 q11 12 22 0 q11 12 22 0 z" fill="#4f9a6a"/>
+  <!-- 一樓 -->
+  <rect x="234" y="216" width="132" height="24" fill="#cfa294"/>
+  <rect x="284" y="220" width="32" height="20" fill="#6f5a4c"/>
+  <rect x="242" y="222" width="30" height="12" fill="#9fbcd0"/><rect x="328" y="222" width="30" height="12" fill="#9fbcd0"/>
+
+  <!-- 門口拱門「台中市召會」 -->
+  <g>
+    <rect x="104" y="208" width="16" height="44" fill="#fbfbf6"/>
+    <rect x="180" y="208" width="16" height="44" fill="#fbfbf6"/>
+    <rect x="102" y="200" width="20" height="10" fill="#6d6a68"/><rect x="178" y="200" width="20" height="10" fill="#6d6a68"/>
+    <rect x="102" y="244" width="20" height="8" fill="#6d6a68"/><rect x="178" y="244" width="20" height="8" fill="#6d6a68"/>
+    <path d="M98 202 Q150 172 202 202 L202 186 Q150 158 98 186 Z" fill="#fff3dc" stroke="#e9dcc2" stroke-width="1.5"/>
+    <path d="M98 202 L98 186 Q104 182 112 179 L112 197 Z" fill="#c2185b"/>
+    <path d="M202 202 L202 186 Q196 182 188 179 L188 197 Z" fill="#c2185b"/>
+    <text x="150" y="190" text-anchor="middle" font-family="'Noto Sans TC','PingFang TC','Heiti TC','Microsoft JhengHei',sans-serif" font-size="11.5" font-weight="900" fill="#c2185b">台中市召會</text>
+    <g stroke="#3b3330" stroke-width="1.6" fill="none">
+      <path d="M120 252 L120 220 Q150 206 180 220 L180 252"/>
+      <line x1="130" y1="216" x2="130" y2="252"/><line x1="140" y1="213" x2="140" y2="252"/><line x1="150" y1="212" x2="150" y2="252"/><line x1="160" y1="213" x2="160" y2="252"/><line x1="170" y1="216" x2="170" y2="252"/>
+      <line x1="120" y1="236" x2="180" y2="236"/>
+    </g>
+    <!-- 門燈與藤蔓 -->
+    <circle cx="112" cy="222" r="3.5" fill="#f2b544"/><circle cx="188" cy="222" r="3.5" fill="#f2b544"/>
+    <g fill="#7cbf5e"><circle cx="104" cy="186" r="4"/><circle cx="118" cy="178" r="4"/><circle cx="134" cy="172" r="3.5"/><circle cx="166" cy="172" r="3.5"/><circle cx="182" cy="178" r="4"/><circle cx="196" cy="186" r="4"/></g>
+  </g>
+
+  <!-- 樹 -->
+  <g>
+    <rect x="448" y="198" width="6" height="40" rx="3" fill="#b9824f"/>
+    <g fill="#5fa65a"><ellipse cx="436" cy="196" rx="18" ry="6" transform="rotate(-20 436 196)"/><ellipse cx="466" cy="196" rx="18" ry="6" transform="rotate(20 466 196)"/><ellipse cx="451" cy="190" rx="6" ry="16"/></g>
+    <rect x="488" y="208" width="6" height="32" rx="3" fill="#b9824f"/>
+    <g fill="#7cbf5e"><ellipse cx="478" cy="207" rx="15" ry="5" transform="rotate(-20 478 207)"/><ellipse cx="503" cy="207" rx="15" ry="5" transform="rotate(20 503 207)"/><ellipse cx="491" cy="202" rx="5" ry="13"/></g>
+    <circle cx="62" cy="230" r="14" fill="#5fa65a"/><rect x="60" y="238" width="4" height="12" fill="#8a5a35"/>
+    <circle cx="530" cy="236" r="11" fill="#7cbf5e"/><rect x="528" y="242" width="4" height="10" fill="#8a5a35"/>
+  </g>
+  <!-- 花 -->
+  <g><circle cx="210" cy="248" r="3" fill="#f49aa0"/><circle cx="222" cy="250" r="3" fill="#f2b544"/><circle cx="378" cy="250" r="3" fill="#f49aa0"/><circle cx="390" cy="248" r="3" fill="#fff"/></g>
+</svg>

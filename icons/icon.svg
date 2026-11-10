@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- 加到主畫面的圖示（原始檔）；PNG 由這個檔轉出。重要內容都在中間 80% 內，安卓裁成圓形也看得到 -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfe3ef"/><stop offset="1" stop-color="#fbe8c8"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <ellipse cx="256" cy="372" rx="150" ry="34" fill="#c4895a"/>
+  <ellipse cx="256" cy="360" rx="150" ry="30" fill="#a3d06f"/>
+  <polygon points="256,104 368,169 368,299 256,364 144,299 144,169" fill="#d9952b"/>
+  <polygon points="256,92 368,157 368,287 256,352 144,287 144,157" fill="#f2b544"/>
+  <text x="256" y="262" text-anchor="middle" font-family="Fredoka, 'Arial Rounded MT Bold', Arial, sans-serif" font-weight="700" font-size="112" fill="#fff">YP</text>
+</svg>

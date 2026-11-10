@@ -20,6 +20,9 @@
   <meta property="og:locale" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,4 90,27 90,73 50,96 10,73 10,27' fill='%23f2b544'/><text x='50' y='64' font-size='38' text-anchor='middle' font-family='Arial' font-weight='bold' fill='%23fff'>YP</text></svg>">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-title" content="TCYP 小島">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -63,7 +66,7 @@
   </div>
   <nav class="arch-menu" id="archMenu" aria-label="切換群島" hidden></nav>
   <nav class="menu" id="menu" aria-label="小島目錄" hidden>
-    <div class="menu-head"><b>小島目錄</b><span class="menu-head-acts"><button class="menu-tour" id="tourBtn">❓ 教學</button><button class="menu-close" id="menuClose" aria-label="關閉選單">✕</button></span></div>
+    <div class="menu-head"><b>小島目錄</b><span class="menu-head-acts"><button class="menu-tour pwa-install" hidden>📲 加到主畫面</button><button class="menu-tour" id="tourBtn">❓ 教學</button><button class="menu-close" id="menuClose" aria-label="關閉選單">✕</button></span></div>
     <div class="menu-grid" id="dock"></div>
   </nav>
 
@@ -85,7 +88,7 @@
         <button data-enter="plaza#first">👋 第一次參加</button>
         <button data-enter="avatar">👤 捏我的島民</button>
       </div>
-      <p class="intro-ig"><a href="https://www.instagram.com/tc_yp/" target="_blank" rel="noopener">📷 IG @tc_yp</a><a href="https://www.youtube.com/@tcyp479" target="_blank" rel="noopener">▶️ YouTube @tcyp479</a><a href="?text">📄 文字版</a><a href="privacy.html">🔒 隱私說明</a></p>
+      <p class="intro-ig"><a href="https://www.instagram.com/tc_yp/" target="_blank" rel="noopener">📷 IG @tc_yp</a><a href="https://www.youtube.com/@tcyp479" target="_blank" rel="noopener">▶️ YouTube @tcyp479</a><a href="?text">📄 文字版</a><a href="privacy.html">🔒 隱私說明</a><a href="#" class="pwa-install" hidden>📲 加到主畫面</a></p>
       <button class="btn-primary" id="enterBtn">開始探索 →</button>
     </div>
   </div>

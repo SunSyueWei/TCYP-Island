@@ -1,0 +1,17 @@
+{
+  "id": "./",
+  "name": "台中青少年 TCYP 小島",
+  "short_name": "TCYP 小島",
+  "description": "台中市召會青少年組即時資訊互動地圖：行事曆、校園排、社區青少年排、特會與各項成全。",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fbe8c8",
+  "theme_color": "#f6e7c8",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

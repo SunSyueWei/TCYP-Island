@@ -96,7 +96,8 @@ function pastureHtml(auth) {
 }
 
 export function lambIslands(auth) {
-  const pasture = (id, name, emoji, tint, angle, sub) => ({ id, name, short: name, emoji, tint, angle, lamb: true, render: () => hero(LAMB_ISLANDS.find((x) => x.id === id), sub) + pastureHtml(auth) });
+  // 三座牧場島內容一樣，合成一個「我的牧場」入口；溪水旁、羊圈只當風景（沒有標籤，點了也是打開我的牧場）
+  const pasture = (id, name, emoji, tint, angle, sub, alias) => ({ id, name, short: name, emoji, tint, angle, lamb: true, alias, render: () => hero(LAMB_ISLANDS.find((x) => x.id === id), sub) + pastureHtml(auth) });
   const LAMB_ISLANDS = [
     {
       id: 'lb-altar', name: '金香壇之島', short: '代禱牆', emoji: '🕯️', tint: '#fff1c9', center: true, lamb: true,
@@ -107,12 +108,12 @@ export function lambIslands(auth) {
           + sec('🙏 代禱牆', `<p>把你邀約的同學朋友加進代禱名單，大家一起為他們禱告，也一起關心他們：<b>答應前來 → 進入小排 → 受浸</b>。</p>
             ${prayerSummary()}<div class="goto"><button data-open="prayer">🙏 打開代禱牆</button><button data-open="prayer-add">➕ 新增代禱名單</button></div>`)
           + (auth.signedIn() && !mine ? sec('🙋 以前登記過嗎？', '<p>在舊網站登記過的人，可以打開代禱牆，找到自己那一筆按「🙋 這是我登記的」，服事者確認後就會變成你的。</p>') : '')
-          + sec('🐑 我的小羊', `${me || '<p>你登記的朋友會變成小羊，住在旁邊的牧場。每天為他們禱告，小羊就會長大。</p>'}<div class="goto"><button data-goto="lb-grass">🌿 去青草地看小羊</button></div>`);
+          + sec('🐑 我的小羊', `${me || '<p>你登記的朋友會變成小羊，住在旁邊的牧場。每天為他們禱告，小羊就會長大。</p>'}<div class="goto"><button data-goto="lb-grass">🌿 去我的牧場看小羊</button></div>`);
       },
     },
-    pasture('lb-grass', '青草地', '🌿', '#e3f4d2', 90, '祂使我躺臥在青草地上（參 詩篇 23:2）'),
-    pasture('lb-water', '溪水旁', '💧', '#d8eef6', 210, '領我在可安歇的水邊（參 詩篇 23:2）'),
-    pasture('lb-fold', '羊圈', '🏡', '#f6e7d2', 330, '好牧人認識自己的羊（參 約翰福音 10:14）'),
+    pasture('lb-grass', '我的牧場', '🌿', '#e3f4d2', 90, '青草地、溪水旁、羊圈，都是你的小羊住的地方'),
+    pasture('lb-water', '溪水旁', '💧', '#d8eef6', 210, '', 'lb-grass'),
+    pasture('lb-fold', '羊圈', '🏡', '#f6e7d2', 330, '', 'lb-grass'),
   ];
   return LAMB_ISLANDS;
 }
@@ -345,7 +346,7 @@ export function createLambCard({ onPray, onClose }) {
     if (a === 'close') return close();
     if (a === 'pray') { msg = await onPray(key); render(); }
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.hidden) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !el.hidden) { e.stopPropagation(); close(); } });   // 只關卡片，不要連面板一起關
   onLambs(() => { if (!el.hidden) render(); });
   return { open, close, refresh: () => !el.hidden && render(), isOpen: () => !el.hidden, key: () => key };
 }

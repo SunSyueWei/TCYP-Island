@@ -81,6 +81,12 @@ async function toJpeg(file) {
 
 const keysHtml = (n) => [6, 12, 18].map((k, i) => `<span class="pm-key${n >= k ? ' got' : ''}" title="第 ${i + 1} 把鑰匙：拼滿 ${k} 塊">🗝️</span>`).join('');
 const fmtWeek = (w) => { const [, m, d] = String(w).split('-'); return m ? `${+m}/${+d} 那週` : ''; };
+// 後端的週代號是那週的週一（台北時間）；一週是週一到週日
+const md = (dt) => `${dt.getUTCMonth() + 1}/${dt.getUTCDate()}`;
+const addDays = (w, n) => { const dt = new Date(`${w}T00:00:00Z`); dt.setUTCDate(dt.getUTCDate() + n); return dt; };
+const weekRange = (w) => (w ? `（${md(addDays(w, 0))}～${md(addDays(w, 6))}）` : '');
+const nextMonday = (w) => (w ? `下週一（${md(addDays(w, 7))}）` : '下週一');
+const missingText = (shots) => { const m = ['神人生活操練表', '申言稿'].filter((_, k) => !shots[k]); return m.length ? `還缺：${m.join('、')}的照片` : ''; };
 
 // ---------- 視窗 ----------
 export function createPractice({ signIn, signedIn }) {
@@ -129,8 +135,8 @@ export function createPractice({ signIn, signedIn }) {
 
   function renderMap() {
     if (st.status === 'signin') {
-      return `${mapSvg([])}<div class="pm-intro"><p>每週交一次<b>操練本</b>（神人生活操練表＋申言稿），就能拼上一塊藏寶圖。18 塊拼完，會出現一個大驚喜！</p>
-        <button class="pm-go" data-act="signin">用 Google 帳號登入</button></div>`;
+      return `<div class="pm-intro"><p>每週交一次<b>操練本</b>（神人生活操練表＋申言稿），就能拼上一塊藏寶圖。18 塊拼完，會出現一個大驚喜！</p>
+        <button class="pm-go" data-act="signin">用 Google 帳號登入</button></div>${mapSvg([])}`;
     }
     if (!st.data) return st.status === 'error' ? `<p class="pm-err">讀不到藏寶圖：${esc(st.error)}</p><button class="pm-go" data-act="reload">再試一次</button>` : '<p class="pm-wait">打開藏寶圖中……</p>';
     const d = st.data, n = d.pieces.length, gold = d.pieces.filter((p) => p.gold).length;
@@ -139,20 +145,28 @@ export function createPractice({ signIn, signedIn }) {
     if (done) {
       action = `<div class="pm-done"><b>🎉 藏寶圖拼完了！</b><p>18 週的操練本都交齊了，這是我們的復興大樓。謝謝你一週一週的操練！</p></div>`;
     } else if (d.doneThisWeek) {
-      action = `<div class="pm-wk ok"><b>✅ 這週已經拼好了！</b><p>下週一開始可以拼第 ${n + 1} 塊。記得請服事者在申言稿上簽名，這塊就會變成<b class="pm-gold-t">金色</b>。</p></div>`;
+      const mine = d.pieces.find((p) => p.week === d.thisWeek);
+      const signed = mine?.gold
+        ? '<p class="pm-state gold">✦ 已簽名：服事者簽過名，這塊是<b class="pm-gold-t">金色</b>的。</p>'
+        : '<p class="pm-state wait">⏳ 已交，等簽名：請服事者在申言稿上簽名，這塊就會變成<b class="pm-gold-t">金色</b>。</p>';
+      action = `<div class="pm-wk ok"><b>✅ 這週${weekRange(d.thisWeek)}已經拼好了！</b>${signed}<p>${nextMonday(d.thisWeek)}開始可以拼第 ${n + 1} 塊。</p></div>`;
     } else {
       const slot = (k, label) => `<label class="pm-slot${shots[k] ? ' has' : ''}">
           <input type="file" accept="image/*" data-slot="${k}" ${sending ? 'disabled' : ''}>
           <span class="pm-prev">${slotPreview(k, label)}</span>
           <b>${k + 1}. ${label}</b><small>${shots[k] ? '點一下可以重拍' : '點一下拍照或選照片'}</small></label>`;
-      action = `<div class="pm-wk"><b>這週要拼第 ${n + 1} 塊</b><p>拍下這週的兩頁操練本，字要拍清楚。</p>
+      action = `<div class="pm-wk"><b>這週${weekRange(d.thisWeek)}要拼第 ${n + 1} 塊</b><p class="pm-state todo">📝 還沒交：拍下這週的兩頁操練本，字要拍清楚。週日以前交都算這週。</p>
         <div class="pm-slots">${slot(0, '神人生活操練表')}${slot(1, '申言稿')}</div>
+        <p class="pm-missing"${sending || !missingText(shots) ? ' hidden' : ''}>${missingText(shots)}</p>
         <button class="pm-go" data-act="send" ${shots[0] && shots[1] && !sending ? '' : 'disabled'}>${sending ? '上傳中……' : `🧩 交出這週，拼上第 ${n + 1} 塊`}</button>
         <p class="pm-note">照片只有你和服事者看得到。請服事者在申言稿簽名後，這塊會變成金色。</p></div>`;
     }
-    return `${mapSvg(d.pieces, { next: !d.doneThisWeek })}
+    // 先看這週要做什麼，再看累積的藏寶圖
+    const map = `${mapSvg(d.pieces, { next: !d.doneThisWeek })}
       <div class="pm-stat"><span>已拼 <b>${n}</b> / ${d.total} 塊</span><span>✦ 金色 <b>${gold}</b> 塊</span><span class="pm-keys" aria-label="已得到 ${Math.floor(n / 6)} 把鑰匙">${keysHtml(n)}</span></div>
-      <p class="pm-msg" role="status"${msg ? '' : ' hidden'}>${msg}</p>${action}`;
+      <p class="pm-legend">🧩 拼上的塊＝已交、等服事者簽名　✦ 金色＝服事者簽過名　🗝️ 每拼滿 6 塊得到一把鑰匙</p>`;
+    const msgHtml = `<p class="pm-msg" role="status"${msg ? '' : ' hidden'}>${msg}</p>`;
+    return done ? `${msgHtml}${map}${action}` : `${msgHtml}${action}${map}`;
   }
 
   function renderSign() {
@@ -203,6 +217,8 @@ export function createPractice({ signIn, signedIn }) {
     }
     const send = body.querySelector('[data-act="send"]');
     if (send) send.disabled = !(shots[0] && shots[1]) || sending;
+    const miss = body.querySelector('.pm-missing');
+    if (miss) { miss.textContent = missingText(shots); miss.hidden = !miss.textContent; }
   }
   body.addEventListener('change', async (e) => {
     const inp = e.target.closest('input[data-slot]');

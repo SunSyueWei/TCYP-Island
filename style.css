@@ -1038,6 +1038,13 @@ body:has(.intro:not(.gone)) .people-tab { opacity: 0; pointer-events: none; }
 .pm-go:disabled { background: #e6dccb; color: #a99a85; box-shadow: none; cursor: not-allowed; }
 .pm-msg { margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: #fff5d8; font-weight: 700; font-size: 14px; }
 .pm-err { color: #c0392b; font-weight: 700; }
+/* 本週卡在藏寶圖前面：狀態白話、缺照片提示、圖例 */
+.pm-wk + .pm-map, .pm-intro + .pm-map { margin-top: 14px; }
+.pm-wk .pm-state { font-weight: 700; }
+.pm-state.wait { color: #8a5a00; }
+.pm-state.gold { color: #c98a10; }
+.pm-missing { margin: -4px 0 10px; font-size: 13px; font-weight: 700; color: #b5651d; text-align: center; }
+.pm-legend { margin: -4px 0 4px; font-size: 12px; line-height: 1.6; color: var(--ink-soft); }
 .pm-wait { color: var(--ink-soft); text-align: center; padding: 18px 0; }
 
 .pm-queue { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }

@@ -945,7 +945,7 @@ store.onUser(async (u) => {
   refreshStaffAccess(u);
   prayer.userChanged();
   practice.userChanged();
-  lambCard.close();
+  lambReturn = null; lambCard.close();
   resetLambs();
   if (u && arch === 'lamb') loadLambs();
   myPid = null;
@@ -1066,7 +1066,7 @@ addEventListener('pointerdown', (e) => {
 });
 function renderMenu() {
   dock.innerHTML = '';
-  ARCHES[arch].islands().forEach((d) => {
+  ARCHES[arch].islands().filter((d) => !d.alias).forEach((d) => {
     const b = document.createElement('button');
     b.dataset.id = d.id;
     b.innerHTML = `<span class="mi-em" aria-hidden="true">${d.emoji}</span><span class="mi-text"><b>${d.short}</b>${d.name !== d.short ? `<small>${d.name}</small>` : ''}</span>`;
@@ -1122,7 +1122,7 @@ function switchArch(to) {
   closePanel();
   people.close();
   setMenu(false);
-  lambCard.close();
+  lambReturn = null; lambCard.close();
   const from = arch;
   arch = to;
   buildArch(to);
@@ -1163,7 +1163,18 @@ function syncLambWorld() {
   lambWorld.sync(d ? d.lambs : null);
   lambWorld.setFlowers(d ? d.totalPrayers : 0);
 }
+// 從牧場清單打開小羊卡片：關掉卡片後回到原來的清單和捲動位置（不是回全景）
+let lambReturn = null;
+const lambListSpot = () => (selected ? { id: selected.userData.id, scroll: panelBody.scrollTop } : null);
 const lambCard = createLambCard({
+  onClose: () => {
+    const r = lambReturn;
+    lambReturn = null;
+    if (!r || arch !== 'lamb') return;
+    if (selected && selected.userData.id !== r.id) return;   // 中途點了別的島，就留在那裡
+    if (!selected) openIsland(r.id);
+    panelBody.scrollTop = r.scroll;
+  },
   onPray: async (key) => {
     const m = await prayFor(key);
     lambWorld?.celebrate(key);
@@ -1264,6 +1275,7 @@ function renderPanel() {
   panelBody.innerHTML = def.render(taipeiNow(), state);
 }
 function openIsland(id) {
+  id = islandObjs.find((i) => i.userData.id === id)?.userData.def.alias || id;   // 風景島打開它所屬的入口
   const isl = islandObjs.find((i) => i.userData.id === id);
   if (!isl) return;
   people.close();
@@ -1370,9 +1382,9 @@ panelBody.addEventListener('click', (e) => {
   if (e.target.closest('[data-open="prayer-add"]')) return prayer.open('add');
   if (e.target.closest('[data-open="signin"]')) return store.signIn().catch(() => {});
   const lp = e.target.closest('[data-lamb-pray]');
-  if (lp) { if (isMobile()) closePanel(); lambCard.open(lp.dataset.lambPray); return; }
+  if (lp) { const back = lambListSpot(); if (isMobile()) closePanel(); lambCard.open(lp.dataset.lambPray); lambReturn = back; return; }
   const lo = e.target.closest('[data-lamb-open]');
-  if (lo) { lambCard.open(lo.dataset.lambOpen); flyToLamb(lo.dataset.lambOpen); return; }
+  if (lo) { const back = lambListSpot(); lambCard.open(lo.dataset.lambOpen); flyToLamb(lo.dataset.lambOpen); lambReturn = back; return; }
   if (e.target.closest('[data-staff="refresh"]')) { staff.loadDashboard(true).then(renderPanel); renderPanel(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) {
@@ -1499,7 +1511,7 @@ function frame() {
   islandObjs.map((isl, i) => {
     tmpV.set(isl.position.x, isl.position.y + 3.6, isl.position.z).project(camera);
     const el = pinEls[i];
-    const vis = isl.userData.group === arch && tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
+    const vis = isl.userData.group === arch && !isl.userData.def.alias && tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
     el.classList.toggle('hidden', !vis);
     el.classList.toggle('hover', isl === hovered);
     el.classList.toggle('dim', !!selected && isl !== selected);
@@ -1579,7 +1591,7 @@ if (tsunami.active) pinEls[islandObjs.findIndex((i) => i.userData.id === 'calend
 // 操作教學：有新功能時自動跳出簡短版；目錄的「❓ 教學」可以看完整版
 const tour = createTour({
   isStaff: () => staffAccess,
-  prepare: () => { closePanel(); setMenu(false); setMeMenu(false); lambCard.close(); },
+  prepare: () => { closePanel(); setMenu(false); setMeMenu(false); lambReturn = null; lambCard.close(); },
 });
 document.getElementById('tourBtn').addEventListener('click', () => tour.start(false));
 tour.autoStart();

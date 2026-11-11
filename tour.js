@@ -1,8 +1,17 @@
 // 操作教學：介紹各群島與按鈕，並特別標出新功能
-// 第一次來、或有沒看過的新功能時自動跳出；其他時候不打擾。小島目錄的「❓ 教學」可以隨時重看。
+// 有沒看過的新功能時自動跳出簡短版；其他時候不打擾。目錄的「❓ 教學」可以隨時看完整版。
 
 // 新功能清單：每次網站有新功能就在最前面加一筆（id 用日期，越新越大）。看過的人不會再自動跳出。
 export const FEATURES = [
+  {
+    id: '2026-11-12',
+    items: [
+      ['🗓️', '聚會、活動一鍵直達', '下方新增「聚會」「活動」按鈕，不用先找小島。'],
+      ['🗺️', '群島切換搬進目錄', '打開「目錄」，最上面就能切換青少年、小羊、服事者群島。'],
+      ['👤', '釣魚在「我的」裏', '「我的」裏有我的島民和釣魚。'],
+      ['📲', '加到主畫面', '目錄裏可以把小島加到手機桌面，像 App 一樣打開。'],
+    ],
+  },
   {
     id: '2026-11-10',
     items: [
@@ -45,15 +54,14 @@ export function createTour({ isStaff, prepare }) {
     const all = [
       { title: '歡迎來到台中青少年小島！', html: `<p>這裏是台中市召會青少年的小島城市。這段教學帶你認識各個群島和按鈕，大約一分鐘，隨時可以跳過。</p>${fresh.length ? whatsNew(fresh) : ''}` },
       { title: '🏝️ 青少年群島', html: '<p>每一座小島都有不同的資訊：活動行事曆、校園排、社區排、特會、之家……<b>點一下小島</b>就會打開介紹。可以拖曳旋轉、用兩指或滾輪縮放。</p>' },
-      { target: '#menuBtn', title: '☰ 小島目錄', html: '<p>所有小島的清單在這裏，找不到小島時按這個最快。</p>' },
-      { target: '#meBtn', title: '👤 我的島民', html: '<p>捏一個自己的島民，用 Google 帳號登入後，大家都能在島上看到你。</p>' },
-      { target: '#fishBtn', title: '🎣 釣魚', html: '<p>每天可以在福音港灣釣 3 次魚，收集不同稀有度的魚。</p>' },
-      { target: '#mapBtn', title: '📜 操練本藏寶圖', feature: '2026-11-10', html: '<p>每週拍下操練本的兩頁（神人生活操練表、申言稿）上傳，就能拼上一塊藏寶圖。服事者簽名後那塊會變成金色，每 6 塊得到一把鑰匙，18 塊拼完會出現復興大樓！</p>' },
+      { target: '#meetBtn', title: '🗓️ 聚會・📅 活動', feature: '2026-11-12', html: '<p>想找每週的校園排、社區排，按<b>聚會</b>；想看近期活動和特會，按<b>活動</b>。</p>' },
+      { target: '#menuBtn', title: '🗺️ 目錄', feature: '2026-11-12', html: '<p>所有小島的清單在這裏。最上面可以<b>切換群島</b>：青少年群島、小羊群島（代禱牆）。</p>' },
+      { target: '#meBtn', title: '👤 我的', feature: '2026-11-12', html: '<p>捏一個自己的島民（登入後大家都看得到），還有每天 3 次的釣魚。</p>' },
+      { target: '#mapBtn', title: '📜 本週操練', feature: '2026-11-10', html: '<p>每週拍下操練本的兩頁（神人生活操練表、申言稿）上傳，就能拼上一塊藏寶圖。服事者簽名後那塊會變成金色，每 6 塊得到一把鑰匙，18 塊拼完會出現復興大樓！</p>' },
       { target: '#peopleBtn', title: '👥 島民名單', html: '<p>看看還有誰在島上，點名字可以看他的島民。</p>' },
-      { target: '#archBtn', title: '🗺️ 群島', html: '<p>這裏可以切換到其他群島。</p>', feature: '2026-11-03' },
       { title: '🐑 小羊群島', feature: '2026-11-03', html: '<p>中央是<b>🕯️ 金香壇之島</b>，代禱牆就在這裏：把你邀約的朋友加進代禱名單，大家一起為他們禱告。</p><p>旁邊的牧場住著<b>你的小羊</b>：你登記的每一位朋友都是一隻小羊。每天點小羊、為他禱告一次，小羊就會長大，還能收集徽章。</p><p>以前在舊網站登記過？打開代禱牆，找到那一筆按<b>🙋 這是我登記的</b>。</p>' },
       { title: '🗝️ 服事者群島', when: isStaff, html: '<p>你是服事者，所以看得到服事者群島：服事者公告、Drive 檔案、召會生活統計。代禱牆裏也有服事者分頁，可以核准認領、看小羊群島的統計。</p>' },
-      { title: '準備好了！', html: '<p>想再看一次教學，打開<b>☰ 小島目錄</b>，按右上角的<b>❓ 教學</b>。</p><p>祝你在小島上玩得開心 🌱</p>' },
+      { title: '準備好了！', html: '<p>想再看一次教學，打開<b>🗺️ 目錄</b>，按右上角的<b>❓ 教學</b>。</p><p>祝你在小島上玩得開心 🌱</p>' },
     ].filter((s) => !s.when || s.when());
     // 有新功能時：先看「新功能」，再看標了「新」的步驟，其他步驟跳過
     if (onlyNew) return [{ title: '✨ 網站有新功能', html: whatsNew(fresh) + '<p class="tour-sub">接下來帶你看看新功能在哪裏。</p>' }, ...all.filter((s) => isNew(s.feature)), all[all.length - 1]];
@@ -112,12 +120,13 @@ export function createTour({ isStaff, prepare }) {
   });
   addEventListener('resize', () => { if (!el.hidden) place(); });
 
-  // 自動跳出：第一次來（等開場卡片關掉）或有沒看過的新功能；海嘯警報開著時等它關掉
+  // 自動跳出：只在有沒看過的新功能時（簡短版）；第一次來不跳完整教學，開場卡片和下方按鈕已經夠清楚，想看再從目錄打開
   function autoStart() {
     const seen = read();
     if (seen >= LATEST) return;
+    if (!seen) { markSeen(); return; }
     const ready = () => document.getElementById('intro')?.classList.contains('gone') && !document.querySelector('.tsunami:not([hidden])');
-    const tick = () => { if (!el.hidden) return; if (ready()) start(!!seen); else setTimeout(tick, 500); };
+    const tick = () => { if (!el.hidden) return; if (ready()) start(true); else setTimeout(tick, 500); };
     setTimeout(tick, 800);
   }
   return { start, autoStart, isOpen: () => !el.hidden };

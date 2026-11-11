@@ -1,4 +1,4 @@
-// 重大行動的「海嘯警報」：進入提醒期間後，每天第一次打開網站會有全螢幕海浪；之後上方一直顯示提醒條
+// 重大行動的「海嘯警報」：進入提醒期間後自動跳一次全螢幕海浪，剩 3 天內改成每天第一次打開都跳；上方一直顯示提醒條
 import { upcomingMajor, isTentative } from './content.js';
 
 const WD = ['日', '一', '二', '三', '四', '五', '六'];
@@ -24,7 +24,7 @@ export function createTsunami({ today, onDetails }) {
   const a = upcomingMajor(today, { preview });
   if (!a) return { active: false };
   const lv = LEVEL[a.level];
-  const seenKey = `tcyp-tsunami:${a.ev.start}:${today}`;
+  const seenKey = a.level === 'warn' ? `tcyp-tsunami:${a.ev.start}` : `tcyp-tsunami:${a.ev.start}:${today}`;
 
   // 上方提醒條（一直顯示，點一下再看一次警報）
   const row = document.createElement('div');

@@ -31,8 +31,8 @@ export function createPeople({ list, mine, onFind, onOpen }) {
   const $ = (s) => el.querySelector(s);
   const listEl = $('.pp-list'), emptyEl = $('.pp-empty'), search = $('.pp-search'), view = $('.pp-view');
   const tagsBox = $('.pp-tags');
-  let tagsOn = true;
-  try { tagsOn = localStorage.getItem(TAGS_KEY) !== 'off'; } catch { /* ignore */ }
+  let tagsOn = false;   // 預設不在島上顯示暱稱，畫面比較清爽；打開名單時一樣看得到
+  try { tagsOn = localStorage.getItem(TAGS_KEY) === 'on'; } catch { /* ignore */ }
   tagsBox.checked = tagsOn;
   tagsBox.addEventListener('change', () => {
     tagsOn = tagsBox.checked;

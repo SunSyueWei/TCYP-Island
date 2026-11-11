@@ -57,16 +57,21 @@
 
   <button class="people-tab" id="peopleBtn" aria-expanded="false" aria-controls="people" title="島民名單"><span aria-hidden="true">👥</span><b>島民</b></button>
 
+  <!-- 下方常用入口：每顆都有字，不用猜 -->
   <div class="menu-bar" id="menuBar">
-    <button class="menu-me" id="meBtn"><span aria-hidden="true">👤</span>我的島民</button>
-    <button class="menu-fish" id="fishBtn" aria-label="釣魚"><span aria-hidden="true">🎣</span><em class="mb-l">釣魚</em><span class="fx-count" id="fishCount"></span></button>
-    <button class="menu-map" id="mapBtn" aria-label="操練本藏寶圖"><span aria-hidden="true">📜</span><em class="mb-l">藏寶圖</em></button>
-    <button class="menu-arch" id="archBtn" aria-label="切換群島" aria-expanded="false" aria-controls="archMenu"><span aria-hidden="true">🗺️</span><b class="mb-l">群島</b></button>
-    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu"><span aria-hidden="true">☰</span><em class="mb-x">小島</em>目錄</button>
+    <button class="menu-me" id="meBtn" aria-expanded="false" aria-controls="meMenu"><span aria-hidden="true">👤</span>我的</button>
+    <button id="meetBtn"><span aria-hidden="true">🗓️</span>聚會</button>
+    <button id="eventBtn"><span aria-hidden="true">📅</span>活動</button>
+    <button class="menu-map" id="mapBtn" aria-label="本週操練（操練本藏寶圖）"><span aria-hidden="true">📜</span>操練</button>
+    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu"><span aria-hidden="true">🗺️</span>目錄</button>
   </div>
-  <nav class="arch-menu" id="archMenu" aria-label="切換群島" hidden></nav>
+  <nav class="me-menu" id="meMenu" aria-label="我的" hidden>
+    <button id="avatarBtn"><span aria-hidden="true">👤</span><b>我的島民</b><small>捏一個自己的島民</small></button>
+    <button class="menu-fish" id="fishBtn" aria-label="釣魚"><span aria-hidden="true">🎣</span><b>釣魚</b><small>今天還剩 <span class="fx-count" id="fishCount"></span> 次</small></button>
+  </nav>
   <nav class="menu" id="menu" aria-label="小島目錄" hidden>
     <div class="menu-head"><b>小島目錄</b><span class="menu-head-acts"><button class="menu-tour pwa-install" hidden>📲 加到主畫面</button><button class="menu-tour" id="tourBtn">❓ 教學</button><button class="menu-close" id="menuClose" aria-label="關閉選單">✕</button></span></div>
+    <div class="arch-tabs" id="archMenu" role="group" aria-label="切換群島"></div>
     <div class="menu-grid" id="dock"></div>
   </nav>
 
@@ -81,7 +86,7 @@
       <div class="intro-hex">YP</div>
       <h1>台中青少年 <span>TCYP</span></h1>
       <p class="intro-tag">一起認識主、享受召會生活，在同伴中成長。</p>
-      <p>歡迎來到青少年小島城市！<br>拖曳旋轉、滾輪縮放，點一下小島看看島上有什麼。</p>
+      <p>歡迎來到青少年小島城市！<br>拖曳旋轉、滾輪縮放，點一下小島看看島上有什麼。<br><small class="intro-hint">找聚會、看活動，用畫面下方的按鈕最快。</small></p>
       <div class="intro-entries">
         <button data-enter="calendar">📅 近期活動</button>
         <button data-enter="campus">🗓️ 每週聚集</button>

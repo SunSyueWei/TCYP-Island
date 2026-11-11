@@ -798,7 +798,8 @@ function makePin(isl) {
   const el = document.createElement('button');
   el.className = 'pin';
   el.tabIndex = -1;
-  el.innerHTML = `<span class="em" style="--c:${def.tint}">${def.emoji}</span>${def.name}<span class="badge" hidden></span>`;
+  el.innerHTML = `<span class="em" style="--c:${def.tint}">${def.emoji}</span><span class="pn">${def.short || def.name}</span><span class="badge" hidden></span>`;
+  el.title = def.name;
   el.addEventListener('click', () => openIsland(def.id));
   el.addEventListener('pointerenter', () => { hovered = isl; });
   el.addEventListener('pointerleave', () => { if (hovered === isl) hovered = null; });
@@ -887,7 +888,7 @@ function tagEl(i) {
 const tagPos = new THREE.Vector3();
 function updateTags(w, h) {
   let shown = [];
-  if (arch === 'main' && people.tagsOn()) {
+  if (arch === 'main' && (people.tagsOn() || people.isOpen())) {   // 預設不顯示，打開島民名單時才顯示
     for (const p of islanders.real()) {
       if (!p.name || p === namePerson || !p.mesh.parent) continue;
       p.mesh.getWorldPosition(tagPos);
@@ -1028,22 +1029,41 @@ const menuBtn = document.getElementById('menuBtn');
 function setMenu(open) {
   menu.hidden = !open;
   menuBtn.setAttribute('aria-expanded', String(open));
-  if (open) people.close();
+  if (open) { people.close(); setMeMenu(false); renderArchMenu(); }
   if (open) (dock.querySelector('.on') || dock.firstElementChild)?.focus();
 }
 menuBtn.addEventListener('click', () => setMenu(menu.hidden));
 document.getElementById('menuClose').addEventListener('click', () => { setMenu(false); menuBtn.focus(); });
-document.getElementById('meBtn').addEventListener('click', () => { setMenu(false); creator.open(); });
+// 「我的」：我的島民、釣魚
+const meMenu = document.getElementById('meMenu');
+const meBtn = document.getElementById('meBtn');
+function setMeMenu(open) {
+  meMenu.hidden = !open;
+  meBtn.setAttribute('aria-expanded', String(open));
+  if (open) { setMenu(false); people.close(); meMenu.querySelector('button')?.focus(); }
+}
+meBtn.addEventListener('click', () => setMeMenu(meMenu.hidden));
+document.getElementById('avatarBtn').addEventListener('click', () => { setMeMenu(false); creator.open(); });
+// 聚會、活動：不管在哪個群島，都直接打開青少年群島的那座島
+function goIsland(id) {
+  setMenu(false); setMeMenu(false);
+  if (arch !== 'main') { switchArch('main'); setTimeout(() => openIsland(id), 1700); } else openIsland(id);
+}
+document.getElementById('meetBtn').addEventListener('click', () => goIsland('campus'));
+document.getElementById('eventBtn').addEventListener('click', () => goIsland('calendar'));
 // 釣魚
 const fishing = createFishing();
 const fishCount = document.getElementById('fishCount');
 const fishBtn = document.getElementById('fishBtn');
-const updateFishCount = () => { fishCount.textContent = `${remainingToday()}/3`; fishBtn.setAttribute('aria-label', `釣魚，今天還剩 ${remainingToday()} 次`); };
+const updateFishCount = () => { fishCount.textContent = `${remainingToday()}`; fishBtn.setAttribute('aria-label', `釣魚，今天還剩 ${remainingToday()} 次`); };
 updateFishCount();
-function openFishing() { setMenu(false); fishing.open(); }
+function openFishing() { setMenu(false); setMeMenu(false); fishing.open(); }
 fishBtn.addEventListener('click', openFishing);
 new MutationObserver(updateFishCount).observe(document.querySelector('.fishing'), { attributes: true, attributeFilter: ['hidden'] });
-addEventListener('pointerdown', (e) => { if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false); });
+addEventListener('pointerdown', (e) => {
+  if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false);
+  if (!meMenu.hidden && !meMenu.contains(e.target) && !meBtn.contains(e.target)) setMeMenu(false);
+});
 function renderMenu() {
   dock.innerHTML = '';
   ARCHES[arch].islands().forEach((d) => {
@@ -1062,8 +1082,7 @@ let arch = 'main';
 let staffAccess = false;
 const archExtras = { staff: [], lamb: [] };
 const built = { main: true, staff: false, lamb: false };
-const archBtn = document.getElementById('archBtn');
-const archMenu = document.getElementById('archMenu');
+const archMenu = document.getElementById('archMenu');   // 目錄最上方的群島分頁
 const lambIslandDefs = lambIslands({ signedIn: () => !!store.myUid() });
 let lambWorld = null;
 const ARCHES = {
@@ -1091,15 +1110,12 @@ const archCenter = () => ARCHES[arch].center;
 function homeView() { const c = archCenter(); return [HOME_POS.clone().add(c), c.clone()]; }
 function renderArchMenu() {
   archMenu.innerHTML = Object.entries(ARCHES).filter(([, a]) => !a.staffOnly || staffAccess).map(([k, a]) =>
-    `<button data-arch="${k}"${k === arch ? ' aria-current="true" class="on"' : ''}><b>${a.label}</b><small>${a.sub}</small></button>`).join('');
+    `<button data-arch="${k}" title="${a.sub}"${k === arch ? ' aria-current="true" class="on"' : ''}>${a.label}</button>`).join('');
 }
-function setArchMenu(open) {
-  archMenu.hidden = !open;
-  archBtn.setAttribute('aria-expanded', String(open));
-  if (open) { renderArchMenu(); setMenu(false); archMenu.querySelector('.on, button')?.focus(); }
-}
-archBtn.addEventListener('click', () => setArchMenu(archMenu.hidden));
-archMenu.addEventListener('click', (e) => { const b = e.target.closest('[data-arch]'); if (b) { setArchMenu(false); switchArch(b.dataset.arch); } });
+archMenu.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-arch]');
+  if (b && b.dataset.arch !== arch) switchArch(b.dataset.arch);
+});
 function switchArch(to) {
   if (to === arch || !ARCHES[to]) return;
   if (ARCHES[to].staffOnly && !staffAccess) return;
@@ -1134,9 +1150,9 @@ async function refreshStaffAccess(u) {
   staff.reset();
   chlife.close();
   if (arch === 'staff') switchArch('main');
-  if (!archMenu.hidden) renderArchMenu();
+  if (!menu.hidden) renderArchMenu();
   if (!u || !staff.staffEnabled) return;
-  if (await staff.checkStaff()) { staffAccess = true; if (!archMenu.hidden) renderArchMenu(); }
+  if (await staff.checkStaff()) { staffAccess = true; if (!menu.hidden) renderArchMenu(); }
 }
 renderMenu();
 
@@ -1344,6 +1360,7 @@ document.getElementById('homeBtn').addEventListener('click', goHome);
 addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!menu.hidden) { setMenu(false); menuBtn.focus(); return; }
+  if (!meMenu.hidden) { setMeMenu(false); meBtn.focus(); return; }
   goHome();
 });
 panelBody.addEventListener('click', (e) => {
@@ -1383,6 +1400,7 @@ const clockEl = document.getElementById('clock');
 liveToday.addEventListener('click', () => { state.campusDay = undefined; openIsland('campus'); });
 liveNext.addEventListener('click', () => openIsland('calendar'));
 let lastMinute = -1;
+let alertEv = null;   // 海嘯警報條已經在提醒的活動，上方資訊列就不再重複倒數
 function updateLive() {
   const n = taipeiNow();
   clockEl.textContent = `${String(n.hour).padStart(2, '0')}:${String(n.minute).padStart(2, '0')}`;
@@ -1391,6 +1409,7 @@ function updateLive() {
   const g = todaysGroups(n.day);
   liveToday.innerHTML = `週${WD[n.day]}・今天有 <b>${g.campus.length}</b> 個校園排、<b>${g.community.length}</b> 個社區排`;
   const ev = nextEvent(n.date);
+  liveNext.hidden = !ev || ev === alertEv;
   if (ev) {
     const d = daysUntil(ev.start, n.date);
     const date = `${+ev.start.slice(5, 7)}/${+ev.start.slice(8, 10)}`;
@@ -1475,19 +1494,41 @@ function frame() {
 
   // 標籤位置
   const w = innerWidth, h = innerHeight;
-  islandObjs.forEach((isl, i) => {
+  const placed = [];
+  const keep = (p) => (p.isl === selected || p.isl === hovered ? 2 : p.el.classList.contains('alarm') ? 1 : 0);
+  islandObjs.map((isl, i) => {
     tmpV.set(isl.position.x, isl.position.y + 3.6, isl.position.z).project(camera);
     const el = pinEls[i];
     const vis = isl.userData.group === arch && tmpV.z < 1 && Math.abs(tmpV.x) < 1.1 && Math.abs(tmpV.y) < 1.1;
     el.classList.toggle('hidden', !vis);
     el.classList.toggle('hover', isl === hovered);
     el.classList.toggle('dim', !!selected && isl !== selected);
+    // 量完整寬度（縮成圖示時先暫時展開再量）
+    if (!el._w) {
+      const mini = el.classList.contains('mini');
+      if (mini) el.classList.remove('mini');
+      el._w = el.offsetWidth; el._h = el.offsetHeight;
+      if (mini) el.classList.add('mini');
+    }
+    const fw = el._w;
     // 標籤不超出畫面左右邊緣
-    const half = (el._w ||= el.offsetWidth) / 2 + 8;
+    const half = fw / 2 + 8;
     const px = Math.min(w - half, Math.max(half, (tmpV.x * 0.5 + 0.5) * w));
-    el.style.transform = `translate(${px}px, ${(-tmpV.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+    const py = (-tmpV.y * 0.5 + 0.5) * h;
+    el.style.transform = `translate(${px}px, ${py}px) translate(-50%, -100%)`;
     el.style.zIndex = String(Math.round((1 - tmpV.z) * 10000));
-  });
+    return { isl, el, vis, px, py, fw, fh: el._h || 34, z: tmpV.z };
+  })
+    // 標籤互相重疊時，離鏡頭遠的縮成只剩圖示（選到的、滑鼠指著的、有警報的優先完整顯示）
+    .filter((p) => p.vis)
+    .sort((a, b) => keep(b) - keep(a) || a.z - b.z)
+    .forEach((p) => {
+      const pad = p.el.classList.contains('mini') ? 6 : 2;   // 已縮小的要空出多一點才展開，避免轉動時一直閃
+      const r = [p.px - p.fw / 2 - pad, p.py - p.fh - 10 - pad, p.px + p.fw / 2 + pad, p.py + pad];
+      const hit = p.isl !== selected && p.isl !== hovered && placed.some((q) => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+      p.el.classList.toggle('mini', hit);
+      if (!hit) placed.push(r);
+    });
 
   updateMePin(w, h);
   updateWhoPin(w, h);
@@ -1522,7 +1563,7 @@ const prayer = createPrayer({ signIn: store.signIn, idToken: store.idToken, sign
 
 // 操練本藏寶圖：每週交操練本拼一塊
 const practice = createPractice({ signIn: store.signIn, signedIn: () => !!store.myUid() });
-document.getElementById('mapBtn').addEventListener('click', () => { setMenu(false); setArchMenu(false); practice.open(); });
+document.getElementById('mapBtn').addEventListener('click', () => { setMenu(false); setMeMenu(false); practice.open(); });
 
 // 召會生活人數統計看板（服事者群島）
 const chlife = createChlife({ load: (force) => staff.loadChlife(force), getState: () => staff.chlifeState });
@@ -1532,12 +1573,13 @@ const tsunami = createTsunami({
   today: taipeiNow().date,
   onDetails: () => { intro.classList.add('gone'); if (arch !== 'main') switchArch('main'); openIsland('calendar'); },
 });
+if (tsunami.active) { alertEv = tsunami.event; lastMinute = -1; }
 if (tsunami.active) pinEls[islandObjs.findIndex((i) => i.userData.id === 'calendar')]?.classList.add('alarm');
 
-// 操作教學：第一次來或有新功能時自動跳出；小島目錄的「❓ 教學」可以重看
+// 操作教學：有新功能時自動跳出簡短版；目錄的「❓ 教學」可以看完整版
 const tour = createTour({
   isStaff: () => staffAccess,
-  prepare: () => { closePanel(); setMenu(false); setArchMenu(false); lambCard.close(); },
+  prepare: () => { closePanel(); setMenu(false); setMeMenu(false); lambCard.close(); },
 });
 document.getElementById('tourBtn').addEventListener('click', () => tour.start(false));
 tour.autoStart();

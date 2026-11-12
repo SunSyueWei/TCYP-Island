@@ -92,7 +92,7 @@ function pastureHtml(auth) {
         ${l.prayedToday ? '<span class="lb-done">✅ 今天</span>' : `<button class="lb-pray" data-lamb-pray="${esc(lambKey(l))}">🙏 禱告</button>`}</li>`;
     }).join('')}</ul>`)
     + sec('徽章', `<div class="lb-badges">${badges(d).map(([em, label, got]) => `<span class="${got ? 'got' : ''}" title="${esc(label)}">${em}<small>${esc(label)}</small></span>`).join('')}</div>`)
-    + sec('', '<p class="hint">小羊用「名字」對應成長紀錄；在代禱牆改了朋友的名字，那隻小羊會從頭長大。只有你自己看得到小羊的名字。</p>');
+    + sec('', '<p class="hint">在代禱牆改朋友的名字，小羊的成長會保留。只有你自己看得到小羊的名字。</p>');
 }
 
 export function lambIslands(auth) {

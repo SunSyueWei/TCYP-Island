@@ -84,6 +84,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
   let tab = 'wall';
   let q = '', filter = 'all', onlyMine = false;
   let open = null;            // 展開中的福音朋友 { id, idx, type }
+  let moreOpen = null;        // 哪一筆的「更多」是打開的（畫面重畫後保持）
   let editing = null;         // 正在編輯的登記 id（新增分頁沿用同一個表單）
   let msg = '', busy = false, lastFocus = null;
   const say = (m) => { msg = m; render(); };
@@ -143,7 +144,8 @@ export function createPrayer({ signIn, idToken, signedIn }) {
         : `<button class="pr-claim" data-act="claim" data-id="${esc(r.id)}">🙋 這是我登記的</button>`) : '';
     const staffBits = isStaff() ? `<label class="pr-dist">${esc(r.name)} 屬於<select data-act="district" data-name="${esc(r.name)}"><option value="">未歸類</option>${YOUTH_DISTRICTS.flatMap((g) => g.items).map((n) => `<option${n === r.district ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       <button class="pr-small" data-act="owner" data-id="${esc(r.id)}">${r.owned ? '👤 改擁有者' : '👤 指定擁有者'}</button>` : '';
-    const actions = canEdit(r) ? `<div class="pr-actions">${staffBits}<button class="pr-small" data-act="edit" data-id="${esc(r.id)}">✏️ 編輯</button><button class="pr-small danger" data-act="delete" data-id="${esc(r.id)}">刪除</button></div>` : '';
+    // 管理操作收進「更多」，平常只看名字和狀況
+    const actions = canEdit(r) ? `<details class="pr-more" data-id="${esc(r.id)}"${moreOpen === r.id ? ' open' : ''}><summary>⋯ 更多</summary><div class="pr-actions">${staffBits}<button class="pr-small" data-act="edit" data-id="${esc(r.id)}">✏️ 編輯</button><button class="pr-small danger" data-act="delete" data-id="${esc(r.id)}">刪除</button></div></details>` : '';
     return `<article class="pr-entry${r.mine ? ' mine' : ''}">
       <div class="pr-entry-head"><b>${esc(r.name)}</b>${r.mine ? '<span class="pr-mine">我的</span>' : ''}${isStaff() && !r.owned ? '<span class="pr-noowner" title="這筆是舊網站登記的，還沒指定擁有者">未指定擁有者</span>' : ''}<time>${esc(String(r.timestamp || '').slice(5, 10).replace('-', '/'))}</time></div>
       <div class="pr-friends">${chips}</div>
@@ -183,7 +185,8 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     if (!auth.signedIn()) return `<div class="pr-signin"><p>登記代禱名單需要先用 Google 帳號登入。<br>你登記的朋友，只有你自己和服事者看得到完整姓名，其他人只會看到「林○華」。</p><button class="btn-primary" data-act="signin">用 Google 帳號登入</button></div>`;
     const r = editing ? state.rows.find((x) => x.id === editing) : null;
     const type = r ? (r.type === 'youth' ? 'youth' : 'campus') : (formDraft.type || 'youth');
-    const friends = r ? r.friends.map((f) => ({ n: f.n, c: f.c })) : (formDraft.friends || [{ n: '', c: false }]);
+    // o＝這一格原本的名字：改了名字，儲存時讓後端把小羊成長和跟進狀況搬到新名字
+    const friends = r ? r.friends.map((f) => ({ n: f.n, c: f.c, o: f.o ?? f.n })) : (formDraft.friends || [{ n: '', c: false }]);
     const tags = r ? r.tags || [] : formDraft.tags || [];
     return `<form class="pr-form" data-act="form">
       <h3>${r ? '✏️ 編輯登記' : '🙏 新增代禱名單'}</h3>
@@ -197,9 +200,9 @@ export function createPrayer({ signIn, idToken, signedIn }) {
           ? groupOptions('district', r ? r.group : formDraft.group) + `<optgroup label="用大區選">${YOUTH_AREAS.map((a) => `<option value="area:${esc(a.area)}"${formDraft.group === 'area:' + a.area ? ' selected' : ''}>${esc(a.area)}（${esc(a.district)}）</option>`).join('')}</optgroup>`
           : groupOptions('campus', r ? r.group : formDraft.group)}</select></label>
       <fieldset><legend>福音朋友（勾選＝已答應前來）</legend>
-        <div class="pr-frows">${friends.map((f, i) => `<div class="pr-frow3"><span>${i + 1}</span><input name="friend" maxlength="20" value="${esc(f.n)}" placeholder="朋友的名字" aria-label="第 ${i + 1} 位朋友的名字"><label class="pr-chk"><input type="checkbox" name="confirmed"${f.c ? ' checked' : ''}> 已答應</label>${friends.length > 1 ? `<button type="button" class="pr-x" data-act="del-friend" data-idx="${i}" aria-label="移除">✕</button>` : ''}</div>`).join('')}</div>
+        <div class="pr-frows">${friends.map((f, i) => `<div class="pr-frow3"><span>${i + 1}</span><input name="friend" maxlength="20" value="${esc(f.n)}"${f.o != null ? ` data-orig="${esc(f.o)}"` : ''} placeholder="朋友的名字" aria-label="第 ${i + 1} 位朋友的名字"><label class="pr-chk"><input type="checkbox" name="confirmed"${f.c ? ' checked' : ''}> 已答應</label>${friends.length > 1 ? `<button type="button" class="pr-x" data-act="del-friend" data-idx="${i}" aria-label="移除">✕</button>` : ''}</div>`).join('')}</div>
         <button type="button" class="pr-small" data-act="add-friend">＋ 再加一位</button>
-        ${r ? '<p class="hint">改名字或順序時，跟進狀況是用名字對應的，名字不變就不會掉。</p>' : ''}
+        ${r ? '<p class="hint">直接改名字就好：這位朋友的跟進狀況和小羊的成長都會保留。</p>' : ''}
       </fieldset>
       <fieldset><legend>狀況（選填）</legend><div class="pr-tagpick">${TAGS.map((t) => `<label><input type="checkbox" name="tags" value="${esc(t)}"${tags.includes(t) ? ' checked' : ''}> ${esc(t)}</label>`).join('')}</div></fieldset>
       <label>補充說明（選填，最多 ${NOTE_MAX} 字）<input name="note" maxlength="${NOTE_MAX}" value="${esc(r ? r.note : formDraft.note || '')}" placeholder="例如：週五才有空"></label>
@@ -212,7 +215,8 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     const fd = new FormData(form);
     const names = [...form.querySelectorAll('input[name="friend"]')].map((x) => x.value.replace(/\//g, ' ').trim());
     const conf = [...form.querySelectorAll('input[name="confirmed"]')].map((x) => x.checked);
-    return { name: String(fd.get('name') || '').trim(), type: fd.get('type'), group: String(fd.get('group') || ''), friends: names.map((n, i) => ({ n, c: conf[i] })), tags: fd.getAll('tags'), note: String(fd.get('note') || '').trim().slice(0, NOTE_MAX) };
+    const orig = [...form.querySelectorAll('input[name="friend"]')].map((x) => x.dataset.orig);
+    return { name: String(fd.get('name') || '').trim(), type: fd.get('type'), group: String(fd.get('group') || ''), friends: names.map((n, i) => ({ n, c: conf[i], o: orig[i] })), tags: fd.getAll('tags'), note: String(fd.get('note') || '').trim().slice(0, NOTE_MAX) };
   }
 
   function progressHtml() {
@@ -272,7 +276,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     const when = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
     return `<h3 class="pr-sec">🙋 待確認的認領<small>${staffData.claims ? staffData.claims.length + ' 筆' : ''}</small></h3>${claimsHtml()}
       ${lambStatsHtml()}
-      <div class="pr-staffnote"><b>🔐 服事者</b>：你看得到全部的完整姓名，也可以在代禱牆分頁編輯、刪除、改小區歸屬、指定擁有者。
+      <div class="pr-staffnote"><b>🔐 服事者</b>：你看得到全部的完整姓名，也可以在代禱牆分頁按每筆的「⋯ 更多」編輯、刪除、改小區歸屬、指定擁有者。
       ${noOwner ? `<br>有 <b>${noOwner}</b> 筆是舊網站登記的、還沒有擁有者；到代禱牆按「👤 指定擁有者」填入登記者的 Gmail，他登入後就看得到自己登記的朋友。` : ''}</div>
       <div class="pr-report" data-mark="${esc(state.viewer.email)}・${esc(when)}">
         <table><thead><tr><th>小區／學校</th><th>登記者</th><th>福音朋友</th></tr></thead><tbody>
@@ -321,7 +325,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       if (a === 'coming') return act(() => post('toggleConfirmedAuth', { id: r.id, index: idx, value: !f.c }));
       return act(() => post('setBaptizedAuth', { id: r.id, index: idx, value: !f.b }));
     }
-    if (a === 'edit') { editing = t.dataset.id; tab = 'add'; msg = ''; render(); return; }
+    if (a === 'edit') { editing = t.dataset.id; moreOpen = null; tab = 'add'; msg = ''; render(); return; }
     if (a === 'cancel-edit') { editing = null; tab = 'wall'; render(); return; }
     if (a === 'delete') {
       const r = findRow(t.dataset.id);
@@ -341,7 +345,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
       const form = el.querySelector('.pr-form');
       const d = readForm(form);
       if (a === 'add-friend') d.friends.push({ n: '', c: false }); else d.friends.splice(+t.dataset.idx, 1);
-      if (editing) { const r = findRow(editing); Object.assign(r, { name: d.name, type: d.type, group: d.group, tags: d.tags, note: d.note, friends: d.friends.map((f) => ({ ...(r.friends.find((x) => x.n === f.n) || {}), n: f.n, c: f.c })) }); }
+      if (editing) { const r = findRow(editing); Object.assign(r, { name: d.name, type: d.type, group: d.group, tags: d.tags, note: d.note, friends: d.friends.map((f) => ({ ...(r.friends.find((x) => x.n === f.n) || {}), n: f.n, c: f.c, o: f.o ?? '' })) }); }
       else formDraft = d;
       render();
       el.querySelectorAll('input[name="friend"]')[a === 'add-friend' ? d.friends.length - 1 : 0]?.focus();
@@ -378,6 +382,7 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     if (a === 'district') return act(() => post('setDistrictAuth', { name: t.dataset.name, district: t.value }), '已更新小區歸屬。');
   });
 
+  el.addEventListener('toggle', (e) => { const d = e.target; if (!d.classList?.contains('pr-more')) return; if (d.open) moreOpen = d.dataset.id; else if (moreOpen === d.dataset.id) moreOpen = null; }, true);
   el.addEventListener('input', (e) => { if (e.target.dataset.act === 'q') { q = e.target.value; render(); } });
 
   el.addEventListener('submit', (e) => {
@@ -392,7 +397,8 @@ export function createPrayer({ signIn, idToken, signedIn }) {
     const record = { type: d.type, group, name: d.name, friends: friends.map((f) => f.n), confirmed: friends.filter((f) => f.c).map((f) => f.n), tags: d.tags, note: d.note };
     if (editing) {
       const id = editing;
-      act(async () => { await post('updateAuth', { id, record }); editing = null; tab = 'wall'; }, '已儲存。');
+      const renames = friends.filter((f) => f.o && f.o !== f.n).map((f) => [f.o, f.n]);
+      act(async () => { await post('updateAuth', { id, record, renames }); editing = null; tab = 'wall'; }, '已儲存。');
     } else {
       record.id = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
       act(async () => { await post('addAuth', { record }); formDraft = {}; tab = 'wall'; onlyMine = true; }, '已加入代禱名單，謝謝你！');

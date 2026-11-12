@@ -847,6 +847,11 @@ body:has(.intro:not(.gone)) .people-tab { opacity: 0; pointer-events: none; }
 .pr-tags span { font-size: 12px; background: #f3ecdd; border-radius: 999px; padding: 1px 9px; }
 .pr-note { margin: 6px 0 0; font-size: 13px; color: var(--ink-soft); }
 .pr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.pr-more { margin-top: 6px; }
+.pr-more > summary { display: inline-block; list-style: none; cursor: pointer; font-size: 12px; font-weight: 700; color: var(--ink-soft, #7a6a55); padding: 2px 10px; border-radius: 999px; border: 1px dashed var(--line); }
+.pr-more > summary::-webkit-details-marker { display: none; }
+.pr-more[open] > summary { border-style: solid; }
+.pr-more .pr-actions { margin-top: 6px; }
 .pr-small { border: 2px solid var(--line); background: #fff; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 700; }
 .pr-small.danger { color: #b3261e; }
 .pr-dist { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }

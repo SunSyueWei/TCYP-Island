@@ -1137,7 +1137,7 @@ function switchArch(to) {
   if (ARCHES[to].home) setTimeout(() => { if (arch === to) openIsland(ARCHES[to].home); }, 1700);
   if (to === 'staff') {
     if (staff.state.status !== 'ready') staff.loadDashboard().then(() => { if (selected?.userData.group === 'staff') renderPanel(); });
-    if (staff.chlifeState.status === 'idle') staff.loadChlife().then(() => { if (selected?.userData.id === 'st-chlife') renderPanel(); });
+    if (staff.chlifeState.status === 'idle') staff.loadChlife().then(() => { if (selected?.userData.id === 'st-hub') renderPanel(); });
   }
   if (to === 'lamb') {
     if (prayerState.status === 'idle') loadPrayer();
@@ -1375,6 +1375,7 @@ addEventListener('keydown', (e) => {
   if (!meMenu.hidden) { setMeMenu(false); meBtn.focus(); return; }
   goHome();
 });
+panelBody.addEventListener('input', (e) => { if (e.target.dataset.staff === 'q') staff.filterFiles(panelBody, e.target.value); });
 panelBody.addEventListener('click', (e) => {
   if (e.target.closest('[data-open="fishing"]')) return openFishing();
   if (e.target.closest('[data-open="chlife"]')) return chlife.open();
@@ -1385,6 +1386,8 @@ panelBody.addEventListener('click', (e) => {
   if (lp) { const back = lambListSpot(); if (isMobile()) closePanel(); lambCard.open(lp.dataset.lambPray); lambReturn = back; return; }
   const lo = e.target.closest('[data-lamb-open]');
   if (lo) { const back = lambListSpot(); lambCard.open(lo.dataset.lambOpen); flyToLamb(lo.dataset.lambOpen); lambReturn = back; return; }
+  const stTab = e.target.closest('[data-staff-tab]');
+  if (stTab) { staff.setTab(stTab.dataset.staffTab); renderPanel(); return; }
   if (e.target.closest('[data-staff="refresh"]')) { staff.loadDashboard(true).then(renderPanel); renderPanel(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) {

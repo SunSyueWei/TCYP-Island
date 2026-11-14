@@ -51,6 +51,7 @@ export async function loadChlife(force = false) {
 export function reset() {
   Object.assign(state, { status: 'idle', data: null, error: null, email: null });
   Object.assign(chlifeState, { status: 'idle', data: null, error: null });
+  tab = 'home';
 }
 
 // ---------- 畫面 ----------
@@ -75,8 +76,11 @@ function ago(iso) {
   if (m < 43200) return `${Math.round(m / 1440)} 天前`;
   return new Date(iso).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
 }
+// 待刪、暫存與系統雜檔不列出（只是不顯示，雲端原檔不動）
+const JUNK = /待刪|暫存|^~\$|^\.|\.(tmp|bak)$|^(desktop\.ini|thumbs\.db)$/i;
+const clean = (files) => (files || []).filter((f) => !JUNK.test(String(f.name || '').trim()));
 const fileList = (files) => (files?.length
-  ? `<ul class="list">${files.map((f) => `<li><a class="st-file" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener noreferrer"><span>${icon(f.mime)}</span><span><b>${esc(f.name)}</b><small>${f.folder ? esc(f.folder) + '・' : ''}${ago(f.updated)}更新</small></span></a></li>`).join('')}</ul>`
+  ? `<ul class="list">${files.map((f) => `<li data-name="${esc(String(f.name || '').toLowerCase())}"><a class="st-file" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener noreferrer"><span>${icon(f.mime)}</span><span><b>${esc(f.name)}</b><small>${f.folder ? esc(f.folder) + '・' : ''}${ago(f.updated)}更新</small></span></a></li>`).join('')}</ul>`
   : '<p class="hint">沒有找到檔案。</p>');
 
 const sec = (title, inner) => `<section class="p-sec">${title ? `<h3>${title}</h3>` : ''}${inner}</section>`;
@@ -90,37 +94,54 @@ function wrap(d, sub, body) {
   return hero(d, sub) + top + body(s.data) + sec('', `<p class="hint">資料來自青少年服事文件 Google Drive，最多 5 分鐘更新一次（上次更新：${ago(s.data.generatedAt)}）。只有資料夾共用名單裏的人看得到這裏。</p>`);
 }
 
+// 服事工作台：一個入口、三個分頁。其他四座島只當風景（alias），點了也打開工作台
+let tab = 'home';
+export function setTab(t) { if (['home', 'files', 'stats'].includes(t)) tab = t; }
+const TABS = [['home', '🏠 首頁'], ['files', '🗂️ 資料'], ['stats', '📊 統計']];
+const tabsHtml = () => `<div class="st-tabs" role="tablist">${TABS.map(([k, label]) => `<button data-staff-tab="${k}" role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}">${label}</button>`).join('')}</div>`;
+
+function chlifeBlock() {
+  const c = chlifeState;
+  const body = c.status === 'error' && !c.data ? `<p class="cr-warn">讀取失敗（${esc(c.error)}）。</p>`
+    : !c.data ? (c.status === 'ready' ? '<p class="hint">目前還沒有人數統計資料。</p>' : '<p class="hint">正在讀取人數統計…</p>')
+      : panelSummary(c.data);
+  return sec('📈 主日人數（全體）', body + '<button class="btn-primary st-open" data-open="chlife">📈 打開統計看板</button>');
+}
+
+// 只在畫面上過濾（不重畫，輸入框才不會失去焦點）
+export function filterFiles(root, q) {
+  const k = String(q || '').trim().toLowerCase();
+  let shown = 0;
+  root.querySelectorAll('.st-search-list li[data-name]').forEach((li) => { const hit = !k || li.dataset.name.includes(k); li.hidden = !hit; if (hit) shown++; });
+  const none = root.querySelector('.st-nomatch');
+  if (none) none.hidden = shown > 0;
+}
+
+function hubBody(d) {
+  const recent = clean(d.recent);
+  if (tab === 'files') {
+    return sec('', '<input type="search" class="st-q" data-staff="q" placeholder="搜尋檔案或資料夾名稱" aria-label="搜尋檔案或資料夾"><p class="st-nomatch hint" hidden>沒有符合的檔案或資料夾。</p>')
+      + `<div class="st-search-list">`
+      + sec('🕘 最近更新', fileList(recent))
+      + sec(`📁 資料夾（${clean(d.folders).length}）`, fileList(clean(d.folders).map((f) => ({ ...f, mime: 'folder', updated: d.generatedAt }))).replace(/<small>[^<]*<\/small>/g, ''))
+      + '</div>';
+  }
+  if (tab === 'stats') return chlifeBlock() + sec('📊 統計報表', fileList(clean(d.stats))) + sec('📅 行事曆與規劃', fileList(clean(d.plans)));
+  return (d.announce
+    ? sec(`📢 ${esc(d.announce.title)}`, `<div class="st-announce">${esc(d.announce.text).replace(/\n/g, '<br>')}</div><p class="hint">${ago(d.announce.updated)}更新・<a href="${esc(safeUrl(d.announce.url))}" target="_blank" rel="noopener noreferrer">在 Google 文件編輯</a></p>`)
+    : sec('📢 公告', '<p class="hint">目前沒有公告。</p>'))
+    + chlifeBlock()
+    + sec('🕘 最近更新的 5 個檔案', fileList(recent.slice(0, 5)));
+}
+
+const scenery = (id, name, emoji, tint, angle) => ({ id, name, short: name, emoji, tint, angle, staff: true, alias: 'st-hub', render: () => '' });
 export const STAFF_ISLANDS = [
   {
-    id: 'st-hub', name: '服事者會所', short: '公告', emoji: '📢', tint: '#e5ddff', center: true, staff: true,
-    render: () => wrap(STAFF_ISLANDS[0], '服事者公告與最新動態', (d) =>
-      (d.announce
-        ? sec(`📢 ${esc(d.announce.title)}`, `<div class="st-announce">${esc(d.announce.text).replace(/\n/g, '<br>')}</div><p class="hint">${ago(d.announce.updated)}更新・<a href="${esc(safeUrl(d.announce.url))}" target="_blank" rel="noopener noreferrer">在 Google 文件編輯</a></p>`)
-        : sec('📢 公告', '<p class="hint">還沒有設定公告文件。在 Apps Script 的指令碼屬性填入 ANNOUNCE_DOC_ID，就會顯示那份 Google 文件的內容。</p>'))
-      + sec('🕘 最近更新的 5 個檔案', fileList(d.recent.slice(0, 5)))),
+    id: 'st-hub', name: '服事工作台', short: '服事工作台', emoji: '🗝️', tint: '#e5ddff', center: true, staff: true,
+    render: () => wrap(STAFF_ISLANDS[0], '公告、資料與人數統計都在這裏', (d) => tabsHtml() + hubBody(d)),
   },
-  {
-    id: 'st-files', name: '檔案港', short: '最新檔案', emoji: '🗂️', tint: '#dbeefc', angle: 90, staff: true,
-    render: () => wrap(STAFF_ISLANDS[1], '整個資料夾最近更新的檔案', (d) => sec('最近更新', fileList(d.recent))),
-  },
-  {
-    id: 'st-folders', name: '資料夾島', short: '資料夾', emoji: '📁', tint: '#fff0c2', angle: 180, staff: true,
-    render: () => wrap(STAFF_ISLANDS[2], '青少年服事文件的所有資料夾', (d) => sec(`共 ${d.folders.length} 個資料夾`, fileList(d.folders.map((f) => ({ ...f, mime: 'folder', updated: d.generatedAt }))).replace(/<small>[^<]*<\/small>/g, ''))),
-  },
-  {
-    id: 'st-stats', name: '統計瞭望台', short: '統計與規劃', emoji: '📊', tint: '#dff3e4', angle: 0, staff: true,
-    render: () => wrap(STAFF_ISLANDS[3], '人數統計、行事曆與年度規劃', (d) => sec('📊 統計報表', fileList(d.stats)) + sec('📅 行事曆與規劃', fileList(d.plans))),
-  },
-  {
-    id: 'st-chlife', name: '召會生活統計島', short: '人數統計', emoji: '📈', tint: '#dcecfb', angle: 270, staff: true,
-    render: () => {
-      const d = STAFF_ISLANDS[4], c = chlifeState;
-      const body = c.status === 'error' && !c.data ? `<p class="cr-warn">讀取失敗（${esc(c.error)}）。</p>`
-        : !c.data ? (c.status === 'ready' ? '<p class="hint">還沒有設定統計試算表（Apps Script 指令碼屬性 STATS_SHEET_ID）。</p>' : '<p class="hint">正在讀取試算表…</p>')
-          : panelSummary(c.data);
-      return hero(d, '五項聚會人數：主日、小排、家聚會、福音出訪、禱告')
-        + sec('主日（全體）', body + '<button class="btn-primary st-open" data-open="chlife">📈 打開統計看板</button>')
-        + sec('', '<p class="hint">資料即時讀取「青少年聚會人數統計_總表」試算表，最多 5 分鐘更新一次。看板裏可以切換聚會項目、照顧區和小區。</p>');
-    },
-  },
+  scenery('st-files', '檔案港', '🗂️', '#dbeefc', 90),
+  scenery('st-folders', '資料夾島', '📁', '#fff0c2', 180),
+  scenery('st-stats', '統計瞭望台', '📊', '#dff3e4', 0),
+  scenery('st-chlife', '召會生活統計島', '📈', '#dcecfb', 270),
 ];
